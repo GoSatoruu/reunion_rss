@@ -1,0 +1,20 @@
+[
+  {
+    "id": "1f9a945b-089c-4283-ba48-e828a0515716",
+    "name": "BBC News",
+    "url": "https://feeds.bbci.co.uk/news/rss.xml",
+    "added": "2026-03-31T16:11:21.848986"
+  },
+  {
+    "id": "c9b1d0ea-30f6-44b5-b940-b0a7e1454653",
+    "name": "Reuters",
+    "url": "https://www.reutersagency.com/feed/",
+    "added": "2026-03-31T16:25:37.945076"
+  },
+  {
+    "id": "9e027584-aae8-459d-802c-7dc19fa81bdd",
+    "name": "NPR News",
+    "url": "https://feeds.npr.org/1001/rss.xml",
+    "added": "2026-03-31T16:25:40.339079"
+  }
+]

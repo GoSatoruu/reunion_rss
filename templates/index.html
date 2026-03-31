@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GVBC Reunion — Live news feed, flight tracking, and ship tracking dashboard">
+    <title>GVBC Reunion — Dashboard</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- ───── TOP BAR ───── -->
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link active" id="nav-home">DASHBOARD</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <span class="nav-clock" id="nav-clock"></span>
+        </div>
+    </nav>
+
+    <!-- ───── DASHBOARD GRID ───── -->
+    <main id="dashboard">
+
+        <!-- Row 1: Analytics Boards -->
+        <div class="panel-row analytics-row">
+            <!-- Trending Board -->
+            <section class="panel" id="trending-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        TRENDING KEYWORDS
+                    </div>
+                    <span class="panel-badge" id="trending-article-count">0 ARTICLES</span>
+                </div>
+                <div class="panel-body" id="trending-container">
+                    <div class="panel-loading" id="trending-loading">
+                        <div class="p-spinner"></div>
+                        <span>ANALYZING FEED DATA...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Country Mentions Board -->
+            <section class="panel" id="country-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        COUNTRY MENTION INDEX
+                    </div>
+                    <span class="panel-badge" id="country-article-count">0 ARTICLES</span>
+                </div>
+                <div class="panel-body" id="country-container">
+                    <div class="panel-loading" id="country-loading">
+                        <div class="p-spinner"></div>
+                        <span>SCANNING GEOPOLITICAL DATA...</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Row 2: News Feed -->
+        <section class="panel" id="news-panel">
+            <div class="panel-header">
+                <div class="panel-label">
+                    <span class="panel-indicator"></span>
+                    LIVE NEWS FEED
+                </div>
+                <div class="panel-actions">
+                    <span class="panel-badge" id="feed-count">—</span>
+                    <button class="p-btn" id="btn-refresh-feed" title="Refresh">⟳ REFRESH</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="feed-container" class="feed-grid">
+                    <div class="panel-loading" id="feed-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING ARTICLES...</span>
+                    </div>
+                    <div class="empty-state" id="feed-empty" style="display:none;">
+                        <span>NO RSS SOURCES CONFIGURED</span>
+                        <a href="/settings" class="p-btn p-btn-primary">+ ADD SOURCES</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Row 3: Tracking Maps -->
+        <div class="panel-row maps-row">
+            <!-- Flight Tracking -->
+            <section class="panel" id="flight-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        FLIGHT TRACKING — OPENSKY NETWORK
+                    </div>
+                    <div class="panel-actions">
+                        <span class="panel-badge" id="flight-count">0 ACTIVE</span>
+                        <button class="p-btn p-btn-sm" id="btn-refresh-flights">⟳</button>
+                    </div>
+                </div>
+                <div id="flight-map" class="map-container"></div>
+                <div class="panel-footer-bar">AUTO-REFRESH: 15s · DATA SOURCE: opensky-network.org</div>
+            </section>
+
+            <!-- Ship Tracking -->
+            <section class="panel" id="ship-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        VESSEL TRACKING — MARINETRAFFIC
+                    </div>
+                </div>
+                <div class="map-container" id="ship-map-container">
+                    <iframe
+                        id="ship-map"
+                        src="https://www.marinetraffic.com/en/ais/embed/zoom:3/centery:20/centerx:0/maptype:4/shownames:false/mmession:false/showmenu:true"
+                        frameborder="0"
+                        allowfullscreen
+                        loading="lazy"
+                    ></iframe>
+                </div>
+                <div class="panel-footer-bar">LIVE AIS POSITIONS · GLOBAL COVERAGE</div>
+            </section>
+        </div>
+    </main>
+
+    <!-- ───── STATUS BAR ───── -->
+    <footer id="status-bar">
+        <div class="status-left">
+            <img src="/static/img/logo_dark.png" alt="GVBC" class="footer-logo">
+            <span>THE GREAT VIETNAM BANKING CORPORATION</span>
+        </div>
+        <div class="status-right">
+            <span class="status-indicator"></span>
+            <span id="last-updated">LAST SYNC: —</span>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

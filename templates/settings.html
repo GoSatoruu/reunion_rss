@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Manage your RSS feed sources — GVBC Reunion">
+    <title>GVBC Reunion — Settings</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- ───── TOP BAR ───── -->
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/settings" class="nav-link active" id="nav-settings">SETTINGS</a>
+        </div>
+    </nav>
+
+    <!-- ───── SETTINGS CONTENT ───── -->
+    <main id="settings-page">
+        <section class="settings-section">
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        RSS SOURCE CONFIGURATION
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <!-- Add Source Form -->
+                    <form id="add-source-form" class="source-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="source-name">SOURCE NAME</label>
+                                <input type="text" id="source-name" placeholder="e.g. BBC News" autocomplete="off">
+                            </div>
+                            <div class="form-group form-group-url">
+                                <label for="source-url">RSS FEED URL <span class="required">*</span></label>
+                                <input type="url" id="source-url" placeholder="https://feeds.bbci.co.uk/news/rss.xml" required autocomplete="off">
+                            </div>
+                            <button type="submit" class="p-btn p-btn-primary btn-add" id="btn-add-source">
+                                + ADD SOURCE
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Quick Add -->
+                    <div class="quick-add">
+                        <p class="quick-add-label">QUICK ADD:</p>
+                        <div class="quick-add-chips">
+                            <button class="chip" data-name="BBC News" data-url="https://feeds.bbci.co.uk/news/rss.xml">BBC NEWS</button>
+                            <button class="chip" data-name="Reuters" data-url="https://www.reutersagency.com/feed/">REUTERS</button>
+                            <button class="chip" data-name="TechCrunch" data-url="https://techcrunch.com/feed/">TECHCRUNCH</button>
+                            <button class="chip" data-name="Hacker News" data-url="https://hnrss.org/frontpage">HACKER NEWS</button>
+                            <button class="chip" data-name="NASA" data-url="https://www.nasa.gov/rss/dyn/breaking_news.rss">NASA</button>
+                            <button class="chip" data-name="NPR News" data-url="https://feeds.npr.org/1001/rss.xml">NPR NEWS</button>
+                        </div>
+                    </div>
+
+                    <!-- Sources List -->
+                    <div id="sources-list" class="sources-list">
+                        <div class="panel-loading" id="sources-loading">
+                            <div class="p-spinner"></div>
+                            <span>LOADING SOURCES...</span>
+                        </div>
+                    </div>
+                    <div class="empty-state" id="sources-empty" style="display:none;">
+                        <span>NO SOURCES CONFIGURED</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- ───── STATUS BAR ───── -->
+    <footer id="status-bar">
+        <div class="status-left">
+            <img src="/static/img/logo_dark.png" alt="GVBC" class="footer-logo">
+            <span>THE GREAT VIETNAM BANKING CORPORATION</span>
+        </div>
+        <div class="status-right">
+            <span class="status-indicator"></span>
+            <span>SYSTEM READY</span>
+        </div>
+    </footer>
+
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>
