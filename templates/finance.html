@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GVBC Reunion — Financial Intelligence: quantitative market data and global risk analytics">
+    <title>GVBC Reunion — Financial Intelligence</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Finance Page Layout ────────────────────────── */
+        #finance-page {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 16px;
+            padding: 16px;
+            height: calc(100vh - 48px - 28px);
+            overflow: hidden;
+        }
+        .finance-main {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: hidden;
+        }
+        .finance-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* ── KPI Hero Strip ────────────────────────────── */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .kpi-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #8b5cf6, transparent);
+        }
+        .kpi-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 300;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            line-height: 1.2;
+        }
+        .kpi-sub {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+
+        /* ── Factor Grid Container ────────────────── */
+        .chart-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-bottom: none;
+        }
+        .chart-header-bar .panel-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #factors-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-auto-rows: 200px;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .factor-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        .factor-card.expand-h { grid-column: span 2; }
+        .factor-card.expand-v { grid-row: span 2; }
+        .factor-card.expand-full { grid-column: span 3; grid-row: span 2; }
+        .factor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 12px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-2);
+            cursor: pointer;
+            user-select: none;
+        }
+        .factor-header:hover {
+            color: var(--text-0);
+        }
+        .factor-tv-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-0);
+        }
+        .resize-btn {
+            background: none;
+            border: none;
+            color: var(--text-3);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 4px;
+        }
+        .resize-btn:hover { color: var(--text-0); }
+
+        /* ── Sidebar Stats ─────────────────────────────── */
+        .finance-stat-row {
+            display: grid;
+            grid-template-columns: 24px 1fr auto;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.3);
+            font-size: 11px;
+        }
+        .finance-stat-row:hover {
+            background: var(--bg-row-hover);
+        }
+        .stat-rank {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            font-family: var(--font-mono);
+        }
+        .stat-name {
+            font-weight: 600;
+            color: var(--text-1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stat-val {
+            font-weight: 700;
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+
+        /* Loading overlay */
+        .finance-loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 10, 16, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 1000;
+            color: var(--text-2);
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            #finance-page {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: auto;
+            }
+            .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+            #chart-container { min-height: 400px; }
+        }
+        @media (max-width: 768px) {
+            .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ───── TOP BAR ───── -->
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot" style="background: #8b5cf6; box-shadow: 0 0 8px #8b5cf6;"></span>
+            <span class="nav-status-text" style="color: #8b5cf6;">FINANCIAL INTEL</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/finance" class="nav-link active" id="nav-finance">FINANCE INTEL</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
+            <span class="nav-clock" id="nav-clock"></span>
+        </div>
+    </nav>
+
+    <!-- ───── LOADING OVERLAY ───── -->
+    <div class="finance-loading-overlay" id="finance-loader">
+        <div class="p-spinner" style="width:32px;height:32px;border-width:3px;border-top-color:#8b5cf6;"></div>
+        <span>COMPUTING MARKET ALGORITHMS...</span>
+    </div>
+
+    <!-- ───── MAIN CONTENT ───── -->
+    <main id="finance-page">
+
+        <!-- Left: Chart + KPIs -->
+        <div class="finance-main">
+
+            <!-- KPI Hero Strip -->
+            <div class="kpi-strip" id="kpi-strip">
+                <div class="kpi-card">
+                    <span class="kpi-label">VN-INDEX</span>
+                    <span class="kpi-value" id="kpi-vnindex">—</span>
+                    <span class="kpi-sub">HOSE TICKER</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">MARKET SENTIMENT</span>
+                    <span class="kpi-value" id="kpi-sentiment" style="color:#8b5cf6;">—</span>
+                    <span class="kpi-sub">GLOBAL ALGORITHM</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">OVERALL STANCE</span>
+                    <span class="kpi-value" id="kpi-stance">—</span>
+                    <span class="kpi-sub">TECHNICAL ANALYSIS</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">GOLD SPOT</span>
+                    <span class="kpi-value" id="kpi-gold">—</span>
+                    <span class="kpi-sub">SAFE HAVEN</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">USD/VND</span>
+                    <span class="kpi-value" id="kpi-fx">—</span>
+                    <span class="kpi-sub">FOREX</span>
+                </div>
+            </div>
+
+            <!-- Terminal Chart -->
+            <div class="chart-header-bar">
+                <div class="panel-label">
+                    <span class="panel-indicator" style="background:#8b5cf6;box-shadow:0 0 5px #8b5cf6;"></span>
+                    QUANTITATIVE ANALYSIS TERMINAL
+                </div>
+            </div>
+            <div id="factors-grid">
+                <!-- Javascript will dynamically inject the pure data HTML blocks here -->
+                <div class="panel-loading" id="factors-loading" style="grid-column: span 3; display: flex; justify-content: center; align-items: center; min-height: 200px;">
+                    <div class="p-spinner" style="border-top-color:#8b5cf6;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Sidebar Analytics -->
+        <div class="finance-sidebar">
+        
+            <!-- Sentiment Panel -->
+            <section class="panel" id="finance-sentiment-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background:#8b5cf6;"></span>
+                        SENTIMENT ANALYSIS
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:12px; display:flex; flex-direction:column; gap:8px;" id="finance-sentiment-body">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:10px; font-weight:600; color:var(--text-2);">TECHNICAL SCORE</span>
+                        <span style="font-size:12px; font-weight:700; font-family:'JetBrains Mono', monospace;" id="sent-tech">--</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:10px; font-weight:600; color:var(--text-2);">NEWS (RSS) SCORE</span>
+                        <span style="font-size:12px; font-weight:700; font-family:'JetBrains Mono', monospace;" id="sent-news">--</span>
+                    </div>
+                    <div style="margin-top:6px; cursor:default;">
+                        <div style="width:100%; height:6px; background:var(--bg-2); display:flex; border-radius:3px; overflow:hidden;">
+                            <div id="sent-bar" style="width:50%; background:#8b5cf6;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Movers Panel -->
+            <section class="panel" id="finance-movers-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background:#8b5cf6;"></span>
+                        MARKET DRIVERS (14D)
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="finance-movers-body">
+                    <div class="panel-loading" id="movers-loading">
+                        <div class="p-spinner" style="border-top-color:#8b5cf6;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quotes Panel -->
+            <section class="panel" id="finance-quotes-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background:#8b5cf6;"></span>
+                        HOTTEST MEDIA TICKERS (RSS)
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="finance-quotes-body">
+                    <div class="panel-loading" id="quotes-loading">
+                        <div class="p-spinner" style="border-top-color:#8b5cf6;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Macro Panel -->
+            <section class="panel" id="finance-macro-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background:#8b5cf6;"></span>
+                        MACROECONOMIC ALERTS
+                    </div>
+                </div>
+                <div class="panel-body macro-panel-body" id="finance-macro-body" style="padding: 12px; gap: 8px;">
+                    <div class="panel-loading" id="macro-loading">
+                        <div class="p-spinner" style="border-top-color:#8b5cf6;"></div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- ───── STATUS BAR ───── -->
+    <footer id="status-bar">
+        <div class="status-left">
+            <img src="/static/img/logo_dark.png" alt="GVBC" class="footer-logo">
+            <span>FINANCIAL INTELLIGENCE MODULE — GVBC SYNTHETIC ENGINE</span>
+        </div>
+        <div class="status-right">
+            <span class="status-indicator" style="background:#8b5cf6;box-shadow:0 0 5px #8b5cf6;"></span>
+            <span id="last-updated">LAST SYNC: —</span>
+        </div>
+    </footer>
+
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <script src="/static/js/finance.js"></script>
+</body>
+</html>

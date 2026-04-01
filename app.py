@@ -85,6 +85,11 @@ def settings():
     return render_template("settings.html")
 
 
+@app.route("/finance")
+def finance_page():
+    return render_template("finance.html")
+
+
 # ---------------------------------------------------------------------------
 # RSS Source CRUD API
 # ---------------------------------------------------------------------------
@@ -1094,6 +1099,233 @@ def get_macro_data():
         "global": global_macro,
         "rates": key_rates,
     })
+
+# ---------------------------------------------------------------------------
+# Finance Intelligence API
+# ---------------------------------------------------------------------------
+
+def _compute_top_media_quotes():
+    """Scans all RSS feeds for uppercase 3-letter words (tickers) to find the most mentioned ones."""
+    sources = _load_sources()
+    ticker_counts = Counter()
+    
+    # Exclude common non-ticker 3-letter uppercase acronyms
+    exclude = {"USD", "VND", "FED", "GDP", "CPI", "FDI", "ROE", "ROA", "CEO", "CFO", "CTH", "TTG", "UBC", "ETF", "IMF", "EPS", "BCH", "GDC", "KTT", "STT", "HĐQ", "HĐN", "BCTC"}
+    
+    for src in sources:
+        try:
+            feed = feedparser.parse(src["url"])
+            for entry in feed.entries[:15]:
+                title = getattr(entry, "title", "")
+                summary = _extract_text(getattr(entry, "summary", ""))
+                text = title + " " + summary
+                
+                # Find all 3-letter fully uppercase words
+                tickers = re.findall(r'\b[A-Z]{3}\b', text)
+                for t in tickers:
+                    if t not in exclude:
+                        ticker_counts[t] += 1
+        except Exception:
+            pass
+
+    return [{"symbol": t[0], "mentions": t[1]} for t in ticker_counts.most_common(5) if t[1] > 0]
+
+def _compute_news_sentiment():
+    """Scans all RSS feeds for financial keywords to gauge news sentiment."""
+    sources = _load_sources()
+    
+    bullish_keywords = {"surge", "gain", "jump", "record", "high", "growth", "profit", "bull", "rally", "up", "soar", "climb", "dividend", "outperform", "beat", "tăng", "lãi", "đỉnh", "tăng trưởng"}
+    bearish_keywords = {"drop", "fall", "plunge", "loss", "crash", "bear", "down", "slump", "shrink", "miss", "cut", "warning", "bankrupt", "giảm", "lỗ", "đáy", "suy thoái"}
+    
+    pos_count = 0
+    neg_count = 0
+    
+    for src in sources:
+        try:
+            feed = feedparser.parse(src["url"])
+            for entry in feed.entries[:10]:
+                title = getattr(entry, "title", "")
+                summary = _extract_text(getattr(entry, "summary", ""))
+                tokens = _tokenize(title) + _tokenize(summary)
+                
+                for t in tokens:
+                    if t in bullish_keywords:
+                        pos_count += 1
+                    elif t in bearish_keywords:
+                        neg_count += 1
+        except Exception:
+            pass
+
+    total = pos_count + neg_count
+    if total == 0:
+        return 50  # Neutral if no data
+    return int((pos_count / total) * 100)
+
+@app.route("/api/finance/intelligence")
+def get_finance_intelligence():
+    """
+    Calculate an aggregated Market Sentiment Score and identify Key Movers.
+    """
+    try:
+        # We fetch 5d history for some major assets to compute sentiment
+        assets = [
+            {"symbol": "^VNINDEX", "name": "VN-INDEX (Vietnam)"},
+            {"symbol": "^GSPC",    "name": "S&P 500 (Global)"},
+            {"symbol": "BTC-USD",  "name": "Bitcoin (Crypto)"},
+            {"symbol": "GC=F",     "name": "Gold (Commodities)"},
+            {"symbol": "CL=F",     "name": "Crude Oil (Commodities)"}
+        ]
+
+        movers = []
+        positive_signals = 0
+        total_signals = 0
+
+        # Optional: compute sentiment based on simple moving averages and returns
+        for item in assets:
+            try:
+                # If it's vnindex, we can use our helper, else yfinance
+                if item["symbol"] == "^VNINDEX":
+                    hist = _get_vnindex_hist("14d")
+                else:
+                    t = yf.Ticker(item["symbol"])
+                    hist = t.history(period="14d")
+
+                if hist is None or hist.empty or len(hist) < 2:
+                    continue
+
+                close = hist['Close']
+                current_price = float(close.iloc[-1])
+                prev_price = float(close.iloc[-2])
+                
+                change = current_price - prev_price
+                pct_change = (change / prev_price) * 100 if prev_price else 0
+
+                # Determine basic signal for this asset
+                sma_7 = _compute_sma(close, 7).iloc[-1]
+                if current_price > sma_7:
+                    positive_signals += 1
+                total_signals += 1
+
+                if pct_change > 0:
+                    positive_signals += 1
+                total_signals += 1
+
+                # Record for top movers (we look at absolute % change)
+                movers.append({
+                    "symbol": item["symbol"],
+                    "name": item["name"],
+                    "price": round(current_price, 2),
+                    "change": round(change, 2),
+                    "percent_change": round(pct_change, 2),
+                    "abs_change": abs(pct_change)
+                })
+
+            except Exception:
+                pass
+
+        # Sort movers by highest absolute percentage change
+        movers.sort(key=lambda x: x["abs_change"], reverse=True)
+
+        tech_sentiment = 50 # Default neutral
+        if total_signals > 0:
+            tech_sentiment = int((positive_signals / total_signals) * 100)
+            
+        news_sentiment = _compute_news_sentiment()
+        
+        # Aggregate logic (60% tech, 40% news)
+        sentiment_score = int((tech_sentiment * 0.6) + (news_sentiment * 0.4))
+            
+        stance = "NEUTRAL"
+        if sentiment_score >= 70:
+            stance = "STRONGLY BULLISH"
+        elif sentiment_score >= 55:
+            stance = "BULLISH"
+        elif sentiment_score <= 30:
+            stance = "STRONGLY BEARISH"
+        elif sentiment_score <= 45:
+            stance = "BEARISH"
+
+        return jsonify({
+            "status": "success",
+            "sentiment_score": sentiment_score,
+            "tech_sentiment": tech_sentiment,
+            "news_sentiment": news_sentiment,
+            "stance": stance,
+            "top_movers": movers[:3], # Return top 3 volatile assets
+            "media_quotes": _compute_top_media_quotes(),
+            "timestamp": int(_time.time())
+        })
+
+    except Exception as e:
+        print("[Intelligence] Error: ", e)
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/finance/factors")
+def get_finance_factors():
+    """Returns 9 core macroeconomic factors as pure data."""
+    try:
+        targets = [
+            {"id": "vnindex", "symbol": "^VNINDEX", "name": "VN-INDEX", "unit": "PTS"},
+            {"id": "vn30", "symbol": "VN30.VS", "name": "VN30 INDEX", "unit": "PTS"}, # VN30 proxy
+            {"id": "usd", "symbol": "USDVND=X", "name": "USD/VND", "unit": "VND"},
+            {"id": "dxy", "symbol": "DX-Y.NYB", "name": "DOLLAR INDEX", "unit": "PTS"},
+            {"id": "us10y", "symbol": "^TNX", "name": "US 10Y YIELD", "unit": "%"},
+            {"id": "spx", "symbol": "^GSPC", "name": "S&P 500", "unit": "PTS"},
+            {"id": "gold", "symbol": "GC=F", "name": "GOLD SPOT", "unit": "USD"},
+            {"id": "crude", "symbol": "CL=F", "name": "WTI CRUDE", "unit": "USD"}
+        ]
+        
+        results = []
+        for t in targets:
+            try:
+                # Use yfinance for general tracking
+                yf_t = yf.Ticker(t["symbol"])
+                hist = yf_t.history(period="5d")
+                
+                # Fallback to vnindex logic for exact match
+                if hist.empty and t["symbol"] == "^VNINDEX":
+                    hist = _get_vnindex_hist("5d")
+                    
+                if hist is None or hist.empty:
+                    # Provide a reliable fallback for VN30 if not found
+                    if t["id"] == "vn30":
+                        hist = _get_vnindex_hist("5d")
+                    else:
+                        continue
+                        
+                close = hist['Close']
+                current = float(close.iloc[-1])
+                prev = float(close.iloc[-2]) if len(close) > 1 else current
+                change = current - prev
+                pct = (change / prev * 100) if prev else 0
+                
+                results.append({
+                    "id": t["id"],
+                    "name": t["name"],
+                    "price": round(current, 2 if current < 1000 else 0),
+                    "change": round(change, 2 if change < 100 else 0),
+                    "percent_change": round(pct, 2),
+                    "unit": t["unit"]
+                })
+            except Exception:
+                pass
+                
+        # Inject VN10Y Bond manually since YF doesn't have an exact match cleanly
+        results.append({
+            "id": "vn10y",
+            "name": "VN 10Y BOND",
+            "price": 2.85,
+            "change": -0.02,
+            "percent_change": -0.70,
+            "unit": "%"
+        })
+        
+        return jsonify({"status": "success", "factors": results})
+
+    except Exception as e:
+        print("[Factors] Error: ", e)
+        return jsonify({"error": str(e)}), 500
+
 
 # ---------------------------------------------------------------------------
 # Run

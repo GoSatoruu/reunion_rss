@@ -19,6 +19,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadCountries();
     loadGlobalFinance();
     loadMacroData();
+    if (document.getElementById("finance-intel-panel")) {
+        loadFinanceIntelligence();
+        setInterval(loadFinanceIntelligence, 60000); // 1 min auto-refresh
+    }
     
     // Check config before loading maps
     const config = await loadConfig();
@@ -695,6 +699,65 @@ function updateTimestamp() {
     }
 }
 
+
+// ═══════════════════════════════════════════════════════
+// FINANCE INTELLIGENCE WIDGET
+// ═══════════════════════════════════════════════════════
+
+async function loadFinanceIntelligence() {
+    const loading = document.getElementById("finance-intel-loading");
+    const container = document.getElementById("finance-intel-data");
+    
+    if (!loading || !container) return;
+
+    try {
+        const res = await fetch("/api/finance/intelligence");
+        if (!res.ok) throw new Error("Finance Intel API error");
+        const data = await res.json();
+        
+        loading.style.display = "none";
+        container.style.display = "flex";
+
+        document.getElementById("intel-sentiment").textContent = data.sentiment_score + "/100";
+        const stanceEl = document.getElementById("intel-stance");
+        stanceEl.textContent = data.stance;
+        
+        // Color stance
+        const borderEl = document.getElementById("intel-stance-border");
+        if (data.stance.includes("BULLISH")) {
+            stanceEl.style.color = "#10b981";
+            borderEl.style.borderLeftColor = "#10b981";
+        } else if (data.stance.includes("BEARISH")) {
+            stanceEl.style.color = "#ef4444";
+            borderEl.style.borderLeftColor = "#ef4444";
+        } else {
+            stanceEl.style.color = "#f59e0b";
+            borderEl.style.borderLeftColor = "#f59e0b";
+        }
+
+        const moversEl = document.getElementById("intel-movers");
+        moversEl.innerHTML = "";
+        if (data.top_movers && data.top_movers.length > 0) {
+            data.top_movers.forEach(mover => {
+                const isUp = mover.change >= 0;
+                const color = isUp ? "#10b981" : "#ef4444";
+                const sign = isUp ? "+" : "";
+                moversEl.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; font-size:0.85rem; padding:4px 0; border-bottom:1px dashed var(--border-color);">
+                        <span style="font-weight:600; color:var(--text-light);">${mover.symbol}</span>
+                        <span style="color:${color}; font-family:'JetBrains Mono', monospace; font-weight:700;">${sign}${mover.percent_change.toFixed(2)}%</span>
+                    </div>
+                `;
+            });
+        } else {
+            moversEl.innerHTML = `<span style="font-size:0.8rem; color:var(--text-muted);">NOT ENOUGH DATA</span>`;
+        }
+
+    } catch (e) {
+        console.error("[Finance Intel Error]", e);
+        if (loading) loading.innerHTML = "<span>ANALYSIS UNAVAILABLE</span>";
+    }
+}
 
 // ═══════════════════════════════════════════════════════
 // GLOBAL FINANCE STATISTICS — Right Column
