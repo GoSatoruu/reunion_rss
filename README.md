@@ -59,6 +59,18 @@ docker-compose up -d
 
 The application will be available at **http://localhost:5000**. To stop the application, run `docker-compose down`.
 
+### Auto-Updating with Docker (Watchtower)
+
+The `docker-compose.yml` file includes **Watchtower**, a utility that automatically checks for new images every 5 minutes. Whenever a new commit is pushed and built to the GitHub Container Registry, Watchtower will safely download it and restart your application without any manual intervention!
+
+If you prefer to update manually or pull the latest changes, you can do so by running:
+
+```bash
+git pull origin main
+docker-compose pull
+docker-compose up -d
+```
+
 ### Running Locally
 
 #### Prerequisites
