@@ -44,7 +44,24 @@ Browser ─→ Flask (app.py)
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Running with Docker (Recommended)
+
+The easiest way to run GVBC Reunion is using Docker.
+
+```bash
+# Clone the repository
+git clone https://github.com/GoSatoruu/reunion_rss.git
+cd reunion_rss
+
+# Start the application using Docker Compose
+docker-compose up -d
+```
+
+The application will be available at **http://localhost:5000**. To stop the application, run `docker-compose down`.
+
+### Running Locally
+
+#### Prerequisites
 - Python 3.10+
 
 ### Installation
