@@ -57,7 +57,7 @@ cd reunion_rss
 docker-compose up -d
 ```
 
-The application will be available at **http://localhost:5000**. To stop the application, run `docker-compose down`.
+The application will be available at **http://localhost** (or **http://<VPS_IP>** if running on a remote server). To stop the application, run `docker-compose down`.
 
 ### Auto-Updating with Docker (Watchtower)
 

@@ -17,6 +17,7 @@ Now that the application is configured with Docker and pushed to the GitHub Cont
    ```bash
    docker-compose up -d
    ```
+4. Access the application by navigating to `http://<YOUR_SERVER_IP>` in your browser! Make sure port **80** is open in your VPS Firewall (e.g. AWS Security Groups, Oracle Cloud Ingress rules, or UFW).
 
 ## How Auto-Updates Work
 The `docker-compose.yml` file includes a `watchtower` container. Every 5 minutes, it checks the GitHub Container Registry (`ghcr.io/gosatoruu/reunion_rss:latest`) for a new version of the image. When GitHub Actions finishes building a new commit, Watchtower downloads it and gracefully restarts your `web` container, bringing your new changes live with zero effort!
