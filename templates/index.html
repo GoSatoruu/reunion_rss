@@ -22,16 +22,129 @@
         </div>
         <div class="nav-links">
             <a href="/" class="nav-link active" id="nav-home">DASHBOARD</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
             <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
             <span class="nav-clock" id="nav-clock"></span>
         </div>
     </nav>
 
     <!-- ───── DASHBOARD GRID ───── -->
     <main id="dashboard">
+        
+        <!-- Left Column: Analytics & Market -->
+        <div class="dash-col dash-left">
 
-        <!-- Row 1: Analytics Boards -->
-        <div class="panel-row analytics-row">
+            <!-- ══════ VN-INDEX PRICE WIDGET ══════ -->
+            <section class="panel vnindex-widget" id="vnindex-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        HOSE: VN-INDEX
+                    </div>
+                    <span class="panel-badge" id="vnindex-timestamp">--:--</span>
+                </div>
+                <div class="panel-body vnindex-body" id="vnindex-container">
+                    <div class="panel-loading" id="vnindex-loading">
+                        <div class="p-spinner"></div>
+                        <span>CONNECTING TO MARKET...</span>
+                    </div>
+                    <!-- Price Hero -->
+                    <div class="vnindex-hero" id="vnindex-data" style="display:none;">
+                        <div class="vnindex-price-row">
+                            <div class="vnindex-price" id="vnindex-price">--</div>
+                            <div class="vnindex-signal-badge" id="vnindex-overall-signal">--</div>
+                        </div>
+                        <div class="vnindex-changes">
+                            <span class="vnindex-change" id="vnindex-change">--</span>
+                            <span class="vnindex-pct" id="vnindex-pct">--</span>
+                        </div>
+                        <!-- OHLC Mini Bar -->
+                        <div class="vnindex-ohlc" id="vnindex-ohlc">
+                            <div class="ohlc-item"><span class="ohlc-label">O</span><span class="ohlc-val" id="vnindex-open">--</span></div>
+                            <div class="ohlc-item"><span class="ohlc-label">H</span><span class="ohlc-val" id="vnindex-high">--</span></div>
+                            <div class="ohlc-item"><span class="ohlc-label">L</span><span class="ohlc-val" id="vnindex-low">--</span></div>
+                            <div class="ohlc-item"><span class="ohlc-label">VOL</span><span class="ohlc-val" id="vnindex-volume">--</span></div>
+                        </div>
+                        <!-- Sparkline -->
+                        <div class="vnindex-sparkline-wrap">
+                            <canvas id="vnindex-sparkline" width="280" height="60"></canvas>
+                        </div>
+                        <!-- Range bar -->
+                        <div class="vnindex-range" id="vnindex-range">
+                            <span class="range-label" id="vnindex-range-low">--</span>
+                            <div class="range-track">
+                                <div class="range-fill" id="vnindex-range-fill"></div>
+                                <div class="range-pointer" id="vnindex-range-pointer"></div>
+                            </div>
+                            <span class="range-label" id="vnindex-range-high">--</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ══════ TECHNICAL INDICATORS ══════ -->
+            <section class="panel" id="indicators-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        TECHNICAL INDICATORS
+                    </div>
+                </div>
+                <div class="panel-body" id="indicators-container">
+                    <div class="panel-loading" id="indicators-loading">
+                        <div class="p-spinner"></div>
+                        <span>COMPUTING...</span>
+                    </div>
+                    <div class="indicators-grid" id="indicators-data" style="display:none;">
+                        <!-- RSI Gauge -->
+                        <div class="indicator-card indicator-rsi">
+                            <div class="indicator-title">RSI (14)</div>
+                            <div class="rsi-gauge-wrap">
+                                <canvas id="rsi-gauge" width="100" height="56"></canvas>
+                                <div class="rsi-value" id="rsi-value">--</div>
+                            </div>
+                            <div class="rsi-label" id="rsi-label">--</div>
+                        </div>
+                        <!-- MACD -->
+                        <div class="indicator-card indicator-macd">
+                            <div class="indicator-title">MACD</div>
+                            <div class="indicator-rows">
+                                <div class="ind-row"><span class="ind-key">LINE</span><span class="ind-val" id="macd-line">--</span></div>
+                                <div class="ind-row"><span class="ind-key">SIGNAL</span><span class="ind-val" id="macd-signal">--</span></div>
+                                <div class="ind-row"><span class="ind-key">HIST</span><span class="ind-val" id="macd-hist">--</span></div>
+                            </div>
+                        </div>
+                        <!-- Moving Averages -->
+                        <div class="indicator-card indicator-ma">
+                            <div class="indicator-title">MOVING AVG</div>
+                            <div class="indicator-rows">
+                                <div class="ind-row"><span class="ind-key">SMA 20</span><span class="ind-val" id="sma-20">--</span></div>
+                                <div class="ind-row"><span class="ind-key">SMA 50</span><span class="ind-val" id="sma-50">--</span></div>
+                                <div class="ind-row"><span class="ind-key">EMA 12</span><span class="ind-val" id="ema-12">--</span></div>
+                                <div class="ind-row"><span class="ind-key">EMA 26</span><span class="ind-val" id="ema-26">--</span></div>
+                            </div>
+                        </div>
+                        <!-- Bollinger Bands -->
+                        <div class="indicator-card indicator-bb">
+                            <div class="indicator-title">BOLLINGER</div>
+                            <div class="indicator-rows">
+                                <div class="ind-row"><span class="ind-key">UPPER</span><span class="ind-val" id="bb-upper">--</span></div>
+                                <div class="ind-row"><span class="ind-key">MIDDLE</span><span class="ind-val" id="bb-middle">--</span></div>
+                                <div class="ind-row"><span class="ind-key">LOWER</span><span class="ind-val" id="bb-lower">--</span></div>
+                                <div class="ind-row"><span class="ind-key">ATR 14</span><span class="ind-val" id="atr-14">--</span></div>
+                            </div>
+                        </div>
+                        <!-- Signal Tags -->
+                        <div class="indicator-card indicator-signals" id="signal-tags-wrap">
+                            <div class="indicator-title">SIGNALS</div>
+                            <div class="signal-tags" id="signal-tags"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
             <!-- Trending Board -->
             <section class="panel" id="trending-panel">
                 <div class="panel-header">
@@ -67,35 +180,34 @@
             </section>
         </div>
 
-        <!-- Row 2: News Feed -->
-        <section class="panel" id="news-panel">
-            <div class="panel-header">
-                <div class="panel-label">
-                    <span class="panel-indicator"></span>
-                    LIVE NEWS FEED
-                </div>
-                <div class="panel-actions">
-                    <span class="panel-badge" id="feed-count">—</span>
-                    <button class="p-btn" id="btn-refresh-feed" title="Refresh">⟳ REFRESH</button>
-                </div>
-            </div>
-            <div class="panel-body">
-                <div id="feed-container" class="feed-grid">
-                    <div class="panel-loading" id="feed-loading">
-                        <div class="p-spinner"></div>
-                        <span>FETCHING ARTICLES...</span>
+        <!-- Center Column: News Feed + Tracking Maps -->
+        <div class="dash-col dash-center">
+            <section class="panel" id="news-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        LIVE NEWS FEED
                     </div>
-                    <div class="empty-state" id="feed-empty" style="display:none;">
-                        <span>NO RSS SOURCES CONFIGURED</span>
-                        <a href="/settings" class="p-btn p-btn-primary">+ ADD SOURCES</a>
+                    <div class="panel-actions">
+                        <span class="panel-badge" id="feed-count">—</span>
+                        <button class="p-btn" id="btn-refresh-feed" title="Refresh">⟳ REFRESH</button>
                     </div>
                 </div>
-            </div>
-        </section>
+                <div class="panel-body">
+                    <div id="feed-container" class="news-rect-grid">
+                        <div class="panel-loading" id="feed-loading">
+                            <div class="p-spinner"></div>
+                            <span>FETCHING ARTICLES...</span>
+                        </div>
+                        <div class="empty-state" id="feed-empty" style="display:none;">
+                            <span>NO RSS SOURCES CONFIGURED</span>
+                            <a href="/settings" class="p-btn p-btn-primary">+ ADD SOURCES</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
 
-        <!-- Row 3: Tracking Maps -->
-        <div class="panel-row maps-row">
-            <!-- Flight Tracking -->
+            <!-- Flight Tracking (moved to center) -->
             <section class="panel" id="flight-panel">
                 <div class="panel-header">
                     <div class="panel-label">
@@ -104,33 +216,125 @@
                     </div>
                     <div class="panel-actions">
                         <span class="panel-badge" id="flight-count">0 ACTIVE</span>
+                        <a href="/airline" class="p-btn p-btn-sm" title="Open Airline Intelligence">✈ FULL INTEL</a>
                         <button class="p-btn p-btn-sm" id="btn-refresh-flights">⟳</button>
                     </div>
                 </div>
                 <div id="flight-map" class="map-container"></div>
-                <div class="panel-footer-bar">AUTO-REFRESH: 15s · DATA SOURCE: opensky-network.org</div>
+                <div class="panel-footer-bar">AUTO-REFRESH: 15s · DATA SOURCE: opensky-network.org · <a href="/airline" style="color:var(--cyan);text-decoration:none;">OPEN AIRLINE INTELLIGENCE →</a></div>
             </section>
 
-            <!-- Ship Tracking -->
+            <!-- Ship Tracking (moved to center) -->
             <section class="panel" id="ship-panel">
                 <div class="panel-header">
                     <div class="panel-label">
-                        <span class="panel-indicator indicator-live"></span>
-                        VESSEL TRACKING — MARINETRAFFIC
+                        <span class="panel-indicator indicator-live" style="background: #f59e0b; box-shadow: 0 0 5px #f59e0b;"></span>
+                        VESSEL TRACKING — MARITRAFFIC MAP
+                    </div>
+                    <div class="panel-actions">
+                        <a href="/logistics" class="p-btn p-btn-sm" title="Open Logistics Intelligence" style="color:#f59e0b; border-color:#f59e0b;">🚢 FULL INTEL</a>
                     </div>
                 </div>
-                <div class="map-container" id="ship-map-container">
-                    <iframe
-                        id="ship-map"
-                        src="https://www.marinetraffic.com/en/ais/embed/zoom:3/centery:20/centerx:0/maptype:4/shownames:false/mmession:false/showmenu:true"
-                        frameborder="0"
-                        allowfullscreen
-                        loading="lazy"
-                    ></iframe>
+                <!-- Embedded Map instead of custom drawing for simplicity on dash -->
+                <div id="ship-map" class="map-container" style="padding:0;overflow:hidden;">
+                    <iframe name="marinetraffic" id="marinetraffic" width="100%" height="100%" scrolling="no" frameborder="0" src="https://www.marinetraffic.com/en/ais/embed/zoom:3/centery:20/centerx:0/maptype:4/shownames:false/mmsi:0/shipid:0/fleet:/fleet_id:/vtypes:/showmenu:false/remember:false"></iframe>
                 </div>
-                <div class="panel-footer-bar">LIVE AIS POSITIONS · GLOBAL COVERAGE</div>
+                <div class="panel-footer-bar">DATA SOURCE: marinetraffic.com · <a href="/logistics" style="color:#f59e0b;text-decoration:none;">OPEN LOGISTICS INTELLIGENCE →</a></div>
             </section>
         </div>
+
+        <!-- Right Column: Finance Statistics -->
+        <div class="dash-col dash-right">
+
+            <!-- ══════ GLOBAL INDICES ══════ -->
+            <section class="panel" id="indices-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        GLOBAL INDICES
+                    </div>
+                    <span class="panel-badge" id="indices-status">LOADING</span>
+                </div>
+                <div class="panel-body fin-panel-body" id="indices-container">
+                    <div class="panel-loading" id="indices-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING MARKETS...</span>
+                    </div>
+                    <div class="fin-ticker-list" id="indices-list" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ══════ FOREX RATES ══════ -->
+            <section class="panel" id="forex-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        FOREX / CURRENCIES
+                    </div>
+                </div>
+                <div class="panel-body fin-panel-body" id="forex-container">
+                    <div class="panel-loading" id="forex-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING RATES...</span>
+                    </div>
+                    <div class="fin-ticker-list" id="forex-list" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ══════ COMMODITIES ══════ -->
+            <section class="panel" id="commodities-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        COMMODITIES
+                    </div>
+                </div>
+                <div class="panel-body fin-panel-body" id="commodities-container">
+                    <div class="panel-loading" id="commodities-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING PRICES...</span>
+                    </div>
+                    <div class="fin-ticker-list" id="commodities-list" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ══════ CRYPTO ══════ -->
+            <section class="panel" id="crypto-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        CRYPTO
+                    </div>
+                </div>
+                <div class="panel-body fin-panel-body" id="crypto-container">
+                    <div class="panel-loading" id="crypto-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING CRYPTO...</span>
+                    </div>
+                    <div class="fin-ticker-list" id="crypto-list" style="display:none;"></div>
+                </div>
+            </section>
+
+            <!-- ══════ MACROECONOMIC STATISTICS ══════ -->
+            <section class="panel" id="macro-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        MACROECONOMIC DATA
+                    </div>
+                    <span class="panel-badge" id="macro-status">LOADING</span>
+                </div>
+                <div class="panel-body macro-panel-body" id="macro-container">
+                    <div class="panel-loading" id="macro-loading">
+                        <div class="p-spinner"></div>
+                        <span>FETCHING MACRO DATA...</span>
+                    </div>
+                    <div class="macro-grid" id="macro-data" style="display:none;"></div>
+                </div>
+            </section>
+
+        </div>
+        
     </main>
 
     <!-- ───── STATUS BAR ───── -->

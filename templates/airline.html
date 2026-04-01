@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GVBC Reunion — Airline Intelligence: global flight tracking analytics and real-time air traffic monitoring">
+    <title>GVBC Reunion — Airline Intelligence</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ── Airline Page Layout ────────────────────────── */
+        #airline-page {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 16px;
+            padding: 16px;
+            height: calc(100vh - 48px - 28px);
+            overflow: hidden;
+        }
+        .airline-main {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .airline-sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* ── KPI Hero Strip ────────────────────────────── */
+        .kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+        }
+        .kpi-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--cyan), transparent);
+        }
+        .kpi-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+        }
+        .kpi-value {
+            font-size: 24px;
+            font-weight: 300;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            line-height: 1.2;
+        }
+        .kpi-sub {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+
+        /* ── Full Map ──────────────────────────────────── */
+        #airline-map-wrap {
+            flex: 1;
+            min-height: 400px;
+        }
+        #airline-map {
+            width: 100%;
+            height: 100%;
+            border: 1px solid var(--border);
+        }
+        .map-header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 12px;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-bottom: none;
+        }
+        .map-header-bar .panel-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .map-legend {
+            display: flex;
+            gap: 12px;
+            font-size: 9px;
+            letter-spacing: 1px;
+            color: var(--text-3);
+        }
+        .map-legend span::before {
+            content: "";
+            display: inline-block;
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+        .legend-high::before { background: #22c55e; }
+        .legend-mid::before { background: #f59e0b; }
+        .legend-low::before { background: #ef4444; }
+
+        /* ── Sidebar Stats ─────────────────────────────── */
+        .stat-section-title {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--cyan);
+            padding: 6px 12px 4px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* Country / Region rows */
+        .airline-stat-row {
+            display: grid;
+            grid-template-columns: 24px 1fr 50px auto;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.3);
+            font-size: 11px;
+        }
+        .airline-stat-row:hover {
+            background: var(--bg-row-hover);
+        }
+        .stat-rank {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-3);
+            font-family: var(--font-mono);
+        }
+        .stat-name {
+            font-weight: 500;
+            color: var(--text-1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .stat-count {
+            font-weight: 700;
+            color: var(--text-0);
+            text-align: right;
+            font-family: var(--font-mono);
+            font-size: 11px;
+        }
+        .stat-bar-cell {
+            width: 60px;
+        }
+        .stat-bar {
+            height: 4px;
+            background: linear-gradient(90deg, var(--cyan), var(--accent-bright));
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+
+        /* Altitude Distribution Canvas */
+        .alt-chart-wrap {
+            padding: 10px 12px;
+        }
+        .alt-chart-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .alt-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-2);
+            width: 44px;
+            text-align: right;
+            font-family: var(--font-mono);
+        }
+        .alt-bar-track {
+            flex: 1;
+            height: 10px;
+            background: var(--bg-2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .alt-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+        .alt-bar-fill.alt-0 { background: linear-gradient(90deg, #ef4444, #f97316); }
+        .alt-bar-fill.alt-1 { background: linear-gradient(90deg, #f59e0b, #eab308); }
+        .alt-bar-fill.alt-2 { background: linear-gradient(90deg, #84cc16, #22c55e); }
+        .alt-bar-fill.alt-3 { background: linear-gradient(90deg, #06b6d4, #3b82f6); }
+        .alt-bar-fill.alt-4 { background: linear-gradient(90deg, #8b5cf6, #a855f7); }
+        .alt-count {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-2);
+            width: 40px;
+            font-family: var(--font-mono);
+        }
+
+        /* Callsign table */
+        .callsign-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            padding: 6px;
+        }
+        .callsign-chip {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 3px 8px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            color: var(--cyan);
+            font-family: var(--font-mono);
+            letter-spacing: 0.5px;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .callsign-chip:hover {
+            background: var(--bg-3);
+            border-color: var(--cyan);
+        }
+
+        /* Loading overlay */
+        .airline-loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 10, 16, 0.85);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            z-index: 1000;
+            color: var(--text-2);
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            #airline-page {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: auto;
+            }
+            .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .kpi-strip { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- ───── TOP BAR ───── -->
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/airline" class="nav-link active" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
+            <span class="nav-clock" id="nav-clock"></span>
+        </div>
+    </nav>
+
+    <!-- ───── LOADING OVERLAY ───── -->
+    <div class="airline-loading-overlay" id="airline-loader">
+        <div class="p-spinner" style="width:32px;height:32px;border-width:3px;"></div>
+        <span>ACQUIRING FLIGHT DATA...</span>
+    </div>
+
+    <!-- ───── MAIN CONTENT ───── -->
+    <main id="airline-page">
+
+        <!-- Left: Map + KPIs -->
+        <div class="airline-main">
+
+            <!-- KPI Hero Strip -->
+            <div class="kpi-strip" id="kpi-strip">
+                <div class="kpi-card">
+                    <span class="kpi-label">TOTAL TRACKED</span>
+                    <span class="kpi-value" id="kpi-total">—</span>
+                    <span class="kpi-sub">AIRCRAFT WORLDWIDE</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">AIRBORNE</span>
+                    <span class="kpi-value" id="kpi-airborne">—</span>
+                    <span class="kpi-sub">CURRENTLY IN FLIGHT</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">ON GROUND</span>
+                    <span class="kpi-value" id="kpi-ground">—</span>
+                    <span class="kpi-sub">TAXIING / PARKED</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">AVG SPEED</span>
+                    <span class="kpi-value" id="kpi-speed">—</span>
+                    <span class="kpi-sub">KM/H AIRBORNE</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">AVG ALTITUDE</span>
+                    <span class="kpi-value" id="kpi-alt">—</span>
+                    <span class="kpi-sub">METERS MSL</span>
+                </div>
+            </div>
+
+            <!-- Flight Map -->
+            <div class="map-header-bar">
+                <div class="panel-label">
+                    <span class="panel-indicator indicator-live"></span>
+                    GLOBAL AIR TRAFFIC — LIVE
+                </div>
+                <div class="map-legend">
+                    <span class="legend-high">CRUISE (10km+)</span>
+                    <span class="legend-mid">CLIMB/DESC</span>
+                    <span class="legend-low">LOW ALT</span>
+                </div>
+            </div>
+            <div id="airline-map-wrap">
+                <div id="airline-map"></div>
+            </div>
+        </div>
+
+        <!-- Right: Sidebar Analytics -->
+        <div class="airline-sidebar">
+
+            <!-- Countries Panel -->
+            <section class="panel" id="airline-countries-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        FLIGHTS BY ORIGIN COUNTRY
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="airline-countries-body">
+                    <div class="panel-loading" id="countries-stat-loading">
+                        <div class="p-spinner"></div>
+                        <span>ANALYZING...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Altitude Distribution -->
+            <section class="panel" id="airline-alt-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        ALTITUDE DISTRIBUTION
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="airline-alt-body">
+                    <div class="panel-loading" id="alt-stat-loading">
+                        <div class="p-spinner"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Region Distribution -->
+            <section class="panel" id="airline-region-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        REGION DISTRIBUTION
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="airline-region-body">
+                    <div class="panel-loading" id="region-stat-loading">
+                        <div class="p-spinner"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Active Callsigns -->
+            <section class="panel" id="airline-callsigns-panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        ACTIVE CALLSIGNS
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="airline-callsigns-body">
+                    <div class="panel-loading" id="callsigns-stat-loading">
+                        <div class="p-spinner"></div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- ───── STATUS BAR ───── -->
+    <footer id="status-bar">
+        <div class="status-left">
+            <img src="/static/img/logo_dark.png" alt="GVBC" class="footer-logo">
+            <span>AIRLINE INTELLIGENCE MODULE — OPENSKY NETWORK</span>
+        </div>
+        <div class="status-right">
+            <span class="status-indicator"></span>
+            <span id="last-updated">LAST SYNC: —</span>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/js/airline.js"></script>
+</body>
+</html>

@@ -21,13 +21,63 @@
         </div>
         <div class="nav-links">
             <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
             <a href="/settings" class="nav-link active" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
         </div>
     </nav>
 
     <!-- ───── SETTINGS CONTENT ───── -->
     <main id="settings-page">
         <section class="settings-section">
+            
+            <!-- Dashboard Preferences Panel -->
+            <div class="panel" style="margin-bottom: 24px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        DASHBOARD PREFERENCES
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="preferences-list">
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">Flight API Provider</div>
+                                <div class="pref-desc">Select the data source for the Airline Intelligence module.</div>
+                            </div>
+                            <div class="form-group" style="margin: 0; min-width: 200px;">
+                                <select id="flight-provider" class="p-select" style="width: 100%; border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); padding: 4px 8px; font-family: var(--font-mono); font-size: 11px;">
+                                    <option value="opensky">OpenSky Network (Live)</option>
+                                    <option value="mock">Local Simulator (Demo)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">Flight Tracking Map</div>
+                                <div class="pref-desc">Show the flight map on the dashboard. Disabling saves CPU/RAM.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-flights" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">Vessel Tracking Map</div>
+                                <div class="pref-desc">Show the embedded MarineTraffic frame. Disabling this saves network requests.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-ships" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="panel">
                 <div class="panel-header">
                     <div class="panel-label">

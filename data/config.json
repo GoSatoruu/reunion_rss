@@ -1,0 +1,5 @@
+{
+  "enable_flights": true,
+  "enable_ships": true,
+  "flight_provider": "mock"
+}

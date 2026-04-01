@@ -5,6 +5,8 @@
 
 // ─── Initialization ──────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
+    initTheme();
+    loadConfig();
     loadSources();
 
     document.getElementById("add-source-form").addEventListener("submit", addSource);
@@ -17,7 +19,73 @@ document.addEventListener("DOMContentLoaded", () => {
             quickAddSource(name, url, chip);
         });
     });
+
+    // Preferences toggles
+    document.getElementById("toggle-flights").addEventListener("change", updateConfig);
+    document.getElementById("toggle-ships").addEventListener("change", updateConfig);
+    document.getElementById("flight-provider").addEventListener("change", updateConfig);
+    
+    document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 });
+
+// ─── Theme Management ────────────────────────────────
+function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "light") {
+        document.documentElement.setAttribute("data-theme", "light");
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute("data-theme");
+    if (currentTheme === "light") {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("theme", "dark");
+    } else {
+        document.documentElement.setAttribute("data-theme", "light");
+        localStorage.setItem("theme", "light");
+    }
+}
+
+// ─── Load Configuration ──────────────────────────────
+async function loadConfig() {
+    try {
+        const res = await fetch("/api/config");
+        const config = await res.json();
+        document.getElementById("toggle-flights").checked = config.enable_flights !== false;
+        document.getElementById("toggle-ships").checked = config.enable_ships !== false;
+        
+        const providerSelect = document.getElementById("flight-provider");
+        if (providerSelect && config.flight_provider) {
+            providerSelect.value = config.flight_provider;
+        }
+    } catch (err) {
+        console.error("Load config error:", err);
+    }
+}
+
+// ─── Update Configuration ────────────────────────────
+async function updateConfig() {
+    const enable_flights = document.getElementById("toggle-flights").checked;
+    const enable_ships = document.getElementById("toggle-ships").checked;
+    const flight_provider = document.getElementById("flight-provider")?.value || "opensky";
+    
+    try {
+        const res = await fetch("/api/config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enable_flights, enable_ships, flight_provider })
+        });
+        if (res.ok) {
+            showToast("Preferences saved", "success");
+        } else {
+            showToast("Failed to save preferences", "error");
+        }
+    } catch (err) {
+        console.error("Update config error:", err);
+        showToast("Error saving preferences", "error");
+    }
+}
 
 // ─── Load Sources ────────────────────────────────────
 async function loadSources() {

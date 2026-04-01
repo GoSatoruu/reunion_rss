@@ -1,20 +1,38 @@
 [
   {
-    "id": "1f9a945b-089c-4283-ba48-e828a0515716",
-    "name": "BBC News",
-    "url": "https://feeds.bbci.co.uk/news/rss.xml",
-    "added": "2026-03-31T16:11:21.848986"
+    "id": "a9f5b3b0-d9ad-4e3b-a9b5-2e4f46ba24a5",
+    "name": "VnExpress Th\u1eddi S\u1ef1",
+    "url": "https://vnexpress.net/rss/tin-moi-nhat.rss",
+    "added": "2026-03-31T16:39:15.918677"
   },
   {
-    "id": "c9b1d0ea-30f6-44b5-b940-b0a7e1454653",
-    "name": "Reuters",
-    "url": "https://www.reutersagency.com/feed/",
-    "added": "2026-03-31T16:25:37.945076"
+    "id": "2c8c01f0-a357-414d-bef2-a9868616763b",
+    "name": "VnExpress Th\u1ebf Gi\u1edbi",
+    "url": "https://vnexpress.net/rss/the-gioi.rss",
+    "added": "2026-03-31T16:39:34.253585"
   },
   {
-    "id": "9e027584-aae8-459d-802c-7dc19fa81bdd",
-    "name": "NPR News",
-    "url": "https://feeds.npr.org/1001/rss.xml",
-    "added": "2026-03-31T16:25:40.339079"
+    "id": "5439be6b-d947-438c-9402-cceefb297df8",
+    "name": "VnExpress Gi\u1ea3i Tr\u00ed",
+    "url": "https://vnexpress.net/rss/giai-tri.rss",
+    "added": "2026-03-31T16:45:20.390001"
+  },
+  {
+    "id": "6b663173-c0c3-49e0-be0e-d3cbe1713c50",
+    "name": "VnExpress Ph\u00e1p Lu\u1eadt",
+    "url": "https://vnexpress.net/rss/phap-luat.rss",
+    "added": "2026-03-31T16:45:35.474208"
+  },
+  {
+    "id": "0a8828db-7fd9-4058-9004-3c6cacc00469",
+    "name": "VnExpress Tin N\u1ed5i B\u1eadt",
+    "url": "https://vnexpress.net/rss/tin-noi-bat.rss",
+    "added": "2026-03-31T16:49:49.075522"
+  },
+  {
+    "id": "e9ff75e4-d5b8-4536-88d8-f20b2d5e36fc",
+    "name": "CafeF Trang Ch\u1ee7",
+    "url": "https://cafebiz.vn/rss/home.rss",
+    "added": "2026-03-31T16:50:51.262872"
   }
 ]
