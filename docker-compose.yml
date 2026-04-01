@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  web:
+    # This assumes the image is published on GitHub Container Registry (ghcr.io)
+    # Replace username/repo below to match your repo name on github if necessary.
+    image: ghcr.io/gosatoruu/reunion_rss:latest
+    container_name: reunion_rss_web
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount a local folder ./data into the container to retain settings & sources
+      - ./data:/app/data
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+
+  # Watchtower checks the registry for new images and automatically restarts the web container.
+  watchtower:
+    image: containrrr/watchtower
+    container_name: reunion_rss_watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 300 web # Check every 300 seconds (5 minutes) for the "web" container
