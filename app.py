@@ -331,78 +331,8 @@ def get_flights():
         return jsonify({"error": str(e), "flights": []}), 502
 
 
-@app.route("/api/flights/stats")
-def get_flight_stats():
-    """Compute analytics from cached OpenSky data."""
-    try:
-        data, flights = _get_opensky_data()
-
-        total = len(flights)
-        airborne = [f for f in flights if not f["on_ground"]]
-        on_ground_count = total - len(airborne)
-
-        # Country distribution (top 20)
-        country_counter = Counter(f["country"] for f in flights)
-        top_countries = [
-            {"country": c, "count": n}
-            for c, n in country_counter.most_common(20)
-        ]
-
-        # Altitude distribution (airborne only)
-        alt_brackets = {"0-1km": 0, "1-3km": 0, "3-6km": 0, "6-10km": 0, "10km+": 0}
-        for f in airborne:
-            a = f["alt"]
-            if a < 1000: alt_brackets["0-1km"] += 1
-            elif a < 3000: alt_brackets["1-3km"] += 1
-            elif a < 6000: alt_brackets["3-6km"] += 1
-            elif a < 10000: alt_brackets["6-10km"] += 1
-            else: alt_brackets["10km+"] += 1
-
-        # Speed stats (m/s -> km/h)
-        speeds = [f["velocity"] * 3.6 for f in airborne if f["velocity"] > 0]
-        avg_speed = round(sum(speeds) / len(speeds), 1) if speeds else 0
-        max_speed = round(max(speeds), 1) if speeds else 0
-
-        # Average altitude
-        alts = [f["alt"] for f in airborne if f["alt"] > 0]
-        avg_alt = round(sum(alts) / len(alts), 0) if alts else 0
-
-        # Top callsigns (active, non-empty)
-        callsign_list = [f["callsign"] for f in airborne if f["callsign"]]
-        top_callsigns = Counter(callsign_list).most_common(25)
-        top_callsigns_data = [{"callsign": cs, "count": n} for cs, n in top_callsigns]
-
-        # Region distribution
-        regions = {"North America": 0, "Europe": 0, "Asia": 0, "Middle East": 0,
-                   "Africa": 0, "South America": 0, "Oceania": 0, "Other": 0}
-        for f in flights:
-            lat, lon = f["lat"], f["lon"]
-            if 25 <= lat <= 72 and -130 <= lon <= -60: regions["North America"] += 1
-            elif 35 <= lat <= 72 and -10 <= lon <= 40: regions["Europe"] += 1
-            elif 10 <= lat <= 55 and 60 <= lon <= 150: regions["Asia"] += 1
-            elif 12 <= lat <= 42 and 25 <= lon <= 65: regions["Middle East"] += 1
-            elif -35 <= lat <= 37 and -20 <= lon <= 52: regions["Africa"] += 1
-            elif -56 <= lat <= 15 and -82 <= lon <= -34: regions["South America"] += 1
-            elif -50 <= lat <= 0 and 110 <= lon <= 180: regions["Oceania"] += 1
-            else: regions["Other"] += 1
-
-        return jsonify({
-            "timestamp": data.get("time"),
-            "total_tracked": total,
-            "airborne": len(airborne),
-            "on_ground": on_ground_count,
-            "avg_speed_kmh": avg_speed,
-            "max_speed_kmh": max_speed,
-            "avg_altitude_m": avg_alt,
-            "countries": top_countries,
-            "altitude_distribution": alt_brackets,
-            "regions": regions,
-            "top_callsigns": top_callsigns_data,
-        })
-
-    except Exception as e:
-        print(f"[FLIGHTS STATS] Error: {e}")
-        return jsonify({"error": str(e)}), 502
+# Analytics removed - handled on client via Intel.js
+# @app.route("/api/flights/stats")
 
 
 # ---------------------------------------------------------------------------
@@ -496,62 +426,8 @@ def get_vessels():
     })
 
 
-@app.route("/api/vessels/stats")
-def get_vessel_stats():
-    now = _time.time()
-    if not _vessels_cache["data"] or (now - _vessels_cache["timestamp"]) > VESSELS_CACHE_TTL:
-        _vessels_cache["data"] = _generate_vessel_data()
-        _vessels_cache["timestamp"] = now
-        
-    vessels = _vessels_cache["data"]
-    total = len(vessels)
-    
-    # Types distribution
-    type_counts = Counter(v["type"] for v in vessels)
-    type_data = [{"type": k, "count": v} for k, v in type_counts.most_common()]
-    
-    # Flags distribution
-    flag_counts = Counter(v["flag"] for v in vessels)
-    flag_data = [{"flag": k, "count": v} for k, v in flag_counts.most_common(15)]
-    
-    # Speeds
-    active = [v for v in vessels if v["speed"] > 1]
-    avg_speed = round(sum(v["speed"] for v in active) / len(active), 1) if active else 0
-    underway = len(active)
-    moored = total - underway
-    
-    # Estimated TEU (very rough simulation: Cargo ships avg 8000 TEU)
-    cargo_count = type_counts.get("Cargo", 0)
-    est_teu = cargo_count * 8000
-    
-    # Choke points (rough bounding boxes)
-    choke_points = {
-        "Suez Canal": 0,
-        "Panama Canal": 0,
-        "Strait of Malacca": 0,
-        "English Channel": 0
-    }
-    
-    for v in vessels:
-        lat, lon = v["lat"], v["lon"]
-        if 27 <= lat <= 32 and 31 <= lon <= 34: choke_points["Suez Canal"] += 1
-        elif 8 <= lat <= 11 and -81 <= lon <= -78: choke_points["Panama Canal"] += 1
-        elif 1 <= lat <= 6 and 95 <= lon <= 104: choke_points["Strait of Malacca"] += 1
-        elif 49 <= lat <= 51 and -5 <= lon <= 2: choke_points["English Channel"] += 1
-
-    choke_data = [{"name": k, "count": v} for k, v in choke_points.items()]
-
-    return jsonify({
-        "timestamp": int(now),
-        "total_tracked": total,
-        "underway": underway,
-        "moored": moored,
-        "avg_speed_knots": avg_speed,
-        "est_teu_volume": est_teu,
-        "types": type_data,
-        "flags": flag_data,
-        "choke_points": choke_data
-    })
+# Analytics removed - handled on client via Intel.js
+# @app.route("/api/vessels/stats")
 
 
 # ---------------------------------------------------------------------------
@@ -601,59 +477,14 @@ def _extract_text(html_str):
 
 def _tokenize(text):
     """Split text into lowercase alphanumeric tokens (including Vietnamese)."""
+    # Endpoint removed - analysis now handled on client with Intel.js
     # \w matches any word character (including accented chars), [^\W_] ensures no numbers/underscores
     tokens = re.findall(r"[a-zA-Z\u00C0-\u1EF9]{3,}", text.lower())
     return [w for w in tokens if w not in STOP_WORDS]
 
 
-@app.route("/api/trending")
-def get_trending():
-    """Extract top trending keywords from current feed articles."""
-    sources = _load_sources()
-    word_freq = Counter()
-    bigram_freq = Counter()
-    total_articles = 0
-
-    for src in sources:
-        try:
-            feed = feedparser.parse(src["url"])
-            for entry in feed.entries[:15]:
-                title = getattr(entry, "title", "")
-                summary = _extract_text(getattr(entry, "summary", ""))
-                # Weight titles more heavily
-                title_tokens = _tokenize(title)
-                summary_tokens = _tokenize(summary)
-                tokens = title_tokens * 3 + summary_tokens
-
-                word_freq.update(tokens)
-
-                # Bigrams from title only (more meaningful)
-                for i in range(len(title_tokens) - 1):
-                    bigram = f"{title_tokens[i]} {title_tokens[i+1]}"
-                    bigram_freq[bigram] += 1
-
-                total_articles += 1
-        except Exception:
-            pass
-
-    # Top 20 single keywords
-    top_keywords = [
-        {"word": w, "count": c}
-        for w, c in word_freq.most_common(20)
-    ]
-
-    # Top 10 bigrams with count >= 2
-    top_bigrams = [
-        {"phrase": p, "count": c}
-        for p, c in bigram_freq.most_common(10)
-        if c >= 2
-    ]
-
-    return jsonify({
-        "total_articles": total_articles,
-        "keywords": top_keywords,
-        "phrases": top_bigrams,
-    })
+# Endpoint removed - analysis now handled on client with Intel.js
+# @app.route("/api/trending")
 
 
 # ---------------------------------------------------------------------------
@@ -707,59 +538,8 @@ COUNTRY_ALIASES = {
 }
 
 
-@app.route("/api/countries")
-def get_country_mentions():
-    """Scan articles for country name mentions and rank them."""
-    sources = _load_sources()
-    country_counts = Counter()
-    country_articles = {}  # country -> list of article titles
-    total_articles = 0
-
-    for src in sources:
-        try:
-            feed = feedparser.parse(src["url"])
-            for entry in feed.entries[:15]:
-                title = getattr(entry, "title", "")
-                summary = _extract_text(getattr(entry, "summary", ""))
-                text = f"{title} {summary}"
-                total_articles += 1
-
-                mentioned = set()
-
-                # Check full country names
-                for country in COUNTRIES:
-                    if country.lower() in text.lower():
-                        mentioned.add(country)
-
-                # Check aliases
-                for alias, canonical in COUNTRY_ALIASES.items():
-                    # Word boundary check for short aliases
-                    pattern = r'\b' + re.escape(alias) + r'\b'
-                    if re.search(pattern, text, re.IGNORECASE):
-                        mentioned.add(canonical)
-
-                for country in mentioned:
-                    country_counts[country] += 1
-                    if country not in country_articles:
-                        country_articles[country] = []
-                    if len(country_articles[country]) < 3:
-                        country_articles[country].append(title)
-        except Exception:
-            pass
-
-    ranked = []
-    for country, count in country_counts.most_common(25):
-        ranked.append({
-            "country": country,
-            "mentions": count,
-            "pct": round(count / max(total_articles, 1) * 100, 1),
-            "headlines": country_articles.get(country, []),
-        })
-
-    return jsonify({
-        "total_articles": total_articles,
-        "countries": ranked,
-    })
+# Endpoint removed - analysis now handled on client with Intel.js
+# @app.route("/api/countries")
 
 
 # ---------------------------------------------------------------------------
@@ -823,103 +603,6 @@ def _get_vnindex_hist(period="3mo"):
     return None
 
 
-@app.route("/api/finance/vnindex")
-def get_vnindex():
-    try:
-        hist = _get_vnindex_hist("3mo")
-        if hist is None or hist.empty:
-            return jsonify({"error": "No market data found"}), 404
-
-        close = hist['Close']
-        current_price = close.iloc[-1]
-        previous_close = close.iloc[-2] if len(close) > 1 else current_price
-        change = current_price - previous_close
-        percent_change = (change / previous_close) * 100 if previous_close else 0
-
-        # --- Compute Indicators ---
-        sma_20 = _compute_sma(close, 20).iloc[-1]
-        sma_50 = _compute_sma(close, 50).iloc[-1]
-        ema_12 = _compute_ema(close, 12).iloc[-1]
-        ema_26 = _compute_ema(close, 26).iloc[-1]
-        rsi_14 = _compute_rsi(close, 14).iloc[-1]
-        macd_line, signal_line, macd_hist = _compute_macd(close)
-        bb_upper, bb_middle, bb_lower = _compute_bollinger(close)
-        atr = _compute_atr(hist['High'], hist['Low'], close, 14).iloc[-1]
-
-        # Volume info
-        vol_current = int(hist['Volume'].iloc[-1]) if 'Volume' in hist else 0
-        vol_avg_20 = int(hist['Volume'].rolling(20).mean().iloc[-1]) if 'Volume' in hist and len(hist) >= 20 else vol_current
-
-        # Day range
-        day_high = float(hist['High'].iloc[-1])
-        day_low = float(hist['Low'].iloc[-1])
-        day_open = float(hist['Open'].iloc[-1])
-
-        # 52-week (use available data)
-        high_52w = float(hist['High'].max())
-        low_52w = float(hist['Low'].min())
-
-        # Determine trend signal
-        signals = []
-        if current_price > sma_20:
-            signals.append("ABOVE SMA20")
-        else:
-            signals.append("BELOW SMA20")
-        if rsi_14 > 70:
-            signals.append("OVERBOUGHT")
-        elif rsi_14 < 30:
-            signals.append("OVERSOLD")
-        else:
-            signals.append("NEUTRAL RSI")
-        if macd_line.iloc[-1] > signal_line.iloc[-1]:
-            signals.append("MACD BULLISH")
-        else:
-            signals.append("MACD BEARISH")
-
-        # Overall signal
-        bullish_count = sum(1 for s in signals if "ABOVE" in s or "BULLISH" in s or "OVERSOLD" in s)
-        if bullish_count >= 2:
-            overall = "BULLISH"
-        elif bullish_count == 0:
-            overall = "BEARISH"
-        else:
-            overall = "NEUTRAL"
-
-        return jsonify({
-            "symbol": "VNINDEX",
-            "price": round(float(current_price), 2),
-            "change": round(float(change), 2),
-            "percent_change": round(float(percent_change), 2),
-            "timestamp": str(hist.index[-1]),
-            "open": round(day_open, 2),
-            "high": round(day_high, 2),
-            "low": round(day_low, 2),
-            "volume": vol_current,
-            "avg_volume_20": vol_avg_20,
-            "high_period": round(high_52w, 2),
-            "low_period": round(low_52w, 2),
-            "indicators": {
-                "sma_20": round(float(sma_20), 2),
-                "sma_50": round(float(sma_50), 2),
-                "ema_12": round(float(ema_12), 2),
-                "ema_26": round(float(ema_26), 2),
-                "rsi_14": round(float(rsi_14), 2),
-                "macd": round(float(macd_line.iloc[-1]), 2),
-                "macd_signal": round(float(signal_line.iloc[-1]), 2),
-                "macd_histogram": round(float(macd_hist.iloc[-1]), 2),
-                "bb_upper": round(float(bb_upper.iloc[-1]), 2),
-                "bb_middle": round(float(bb_middle.iloc[-1]), 2),
-                "bb_lower": round(float(bb_lower.iloc[-1]), 2),
-                "atr_14": round(float(atr), 2),
-            },
-            "signals": signals,
-            "overall_signal": overall,
-        })
-    except Exception as e:
-        print(f"[Market Data Error] {e}")
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route("/api/finance/vnindex/history")
 def get_vnindex_history():
     """Return VNINDEX close prices for sparkline chart."""
@@ -940,6 +623,48 @@ def get_vnindex_history():
         return jsonify({"symbol": "VNINDEX", "period": period, "data": data_points})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/finance/history/bulk")
+def get_bulk_history():
+    """Return history for multiple symbols at once."""
+    symbols = request.args.get("symbols", "").split(",")
+    period = request.args.get("period", "14d")
+    results = {}
+
+    def fetch_hist(sym):
+        try:
+            # Handle VNINDEX specially
+            if sym == "^VNINDEX":
+                hist = _get_vnindex_hist(period)
+            else:
+                t = yf.Ticker(sym)
+                hist = t.history(period=period)
+            
+            if hist is None or hist.empty:
+                return sym, None
+            
+            data = []
+            for idx, row in hist.iterrows():
+                data.append({
+                    "date": str(idx.date()),
+                    "close": round(float(row['Close']), 2),
+                    "open": round(float(row.get('Open', row['Close'])), 2),
+                    "high": round(float(row.get('High', row['Close'])), 2),
+                    "low": round(float(row.get('Low', row['Close'])), 2),
+                })
+            return sym, data
+        except Exception:
+            return sym, None
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = [executor.submit(fetch_hist, s) for s in symbols if s]
+        for f in as_completed(futures):
+            sym, data = f.result()
+            if data:
+                results[sym] = data
+    
+    return jsonify(results)
 
 
 # ---------------------------------------------------------------------------
@@ -1104,161 +829,8 @@ def get_macro_data():
 # Finance Intelligence API
 # ---------------------------------------------------------------------------
 
-def _compute_top_media_quotes():
-    """Scans all RSS feeds for uppercase 3-letter words (tickers) to find the most mentioned ones."""
-    sources = _load_sources()
-    ticker_counts = Counter()
-    
-    # Exclude common non-ticker 3-letter uppercase acronyms
-    exclude = {"USD", "VND", "FED", "GDP", "CPI", "FDI", "ROE", "ROA", "CEO", "CFO", "CTH", "TTG", "UBC", "ETF", "IMF", "EPS", "BCH", "GDC", "KTT", "STT", "HĐQ", "HĐN", "BCTC"}
-    
-    for src in sources:
-        try:
-            feed = feedparser.parse(src["url"])
-            for entry in feed.entries[:15]:
-                title = getattr(entry, "title", "")
-                summary = _extract_text(getattr(entry, "summary", ""))
-                text = title + " " + summary
-                
-                # Find all 3-letter fully uppercase words
-                tickers = re.findall(r'\b[A-Z]{3}\b', text)
-                for t in tickers:
-                    if t not in exclude:
-                        ticker_counts[t] += 1
-        except Exception:
-            pass
-
-    return [{"symbol": t[0], "mentions": t[1]} for t in ticker_counts.most_common(5) if t[1] > 0]
-
-def _compute_news_sentiment():
-    """Scans all RSS feeds for financial keywords to gauge news sentiment."""
-    sources = _load_sources()
-    
-    bullish_keywords = {"surge", "gain", "jump", "record", "high", "growth", "profit", "bull", "rally", "up", "soar", "climb", "dividend", "outperform", "beat", "tăng", "lãi", "đỉnh", "tăng trưởng"}
-    bearish_keywords = {"drop", "fall", "plunge", "loss", "crash", "bear", "down", "slump", "shrink", "miss", "cut", "warning", "bankrupt", "giảm", "lỗ", "đáy", "suy thoái"}
-    
-    pos_count = 0
-    neg_count = 0
-    
-    for src in sources:
-        try:
-            feed = feedparser.parse(src["url"])
-            for entry in feed.entries[:10]:
-                title = getattr(entry, "title", "")
-                summary = _extract_text(getattr(entry, "summary", ""))
-                tokens = _tokenize(title) + _tokenize(summary)
-                
-                for t in tokens:
-                    if t in bullish_keywords:
-                        pos_count += 1
-                    elif t in bearish_keywords:
-                        neg_count += 1
-        except Exception:
-            pass
-
-    total = pos_count + neg_count
-    if total == 0:
-        return 50  # Neutral if no data
-    return int((pos_count / total) * 100)
-
-@app.route("/api/finance/intelligence")
-def get_finance_intelligence():
-    """
-    Calculate an aggregated Market Sentiment Score and identify Key Movers.
-    """
-    try:
-        # We fetch 5d history for some major assets to compute sentiment
-        assets = [
-            {"symbol": "^VNINDEX", "name": "VN-INDEX (Vietnam)"},
-            {"symbol": "^GSPC",    "name": "S&P 500 (Global)"},
-            {"symbol": "BTC-USD",  "name": "Bitcoin (Crypto)"},
-            {"symbol": "GC=F",     "name": "Gold (Commodities)"},
-            {"symbol": "CL=F",     "name": "Crude Oil (Commodities)"}
-        ]
-
-        movers = []
-        positive_signals = 0
-        total_signals = 0
-
-        # Optional: compute sentiment based on simple moving averages and returns
-        for item in assets:
-            try:
-                # If it's vnindex, we can use our helper, else yfinance
-                if item["symbol"] == "^VNINDEX":
-                    hist = _get_vnindex_hist("14d")
-                else:
-                    t = yf.Ticker(item["symbol"])
-                    hist = t.history(period="14d")
-
-                if hist is None or hist.empty or len(hist) < 2:
-                    continue
-
-                close = hist['Close']
-                current_price = float(close.iloc[-1])
-                prev_price = float(close.iloc[-2])
-                
-                change = current_price - prev_price
-                pct_change = (change / prev_price) * 100 if prev_price else 0
-
-                # Determine basic signal for this asset
-                sma_7 = _compute_sma(close, 7).iloc[-1]
-                if current_price > sma_7:
-                    positive_signals += 1
-                total_signals += 1
-
-                if pct_change > 0:
-                    positive_signals += 1
-                total_signals += 1
-
-                # Record for top movers (we look at absolute % change)
-                movers.append({
-                    "symbol": item["symbol"],
-                    "name": item["name"],
-                    "price": round(current_price, 2),
-                    "change": round(change, 2),
-                    "percent_change": round(pct_change, 2),
-                    "abs_change": abs(pct_change)
-                })
-
-            except Exception:
-                pass
-
-        # Sort movers by highest absolute percentage change
-        movers.sort(key=lambda x: x["abs_change"], reverse=True)
-
-        tech_sentiment = 50 # Default neutral
-        if total_signals > 0:
-            tech_sentiment = int((positive_signals / total_signals) * 100)
-            
-        news_sentiment = _compute_news_sentiment()
-        
-        # Aggregate logic (60% tech, 40% news)
-        sentiment_score = int((tech_sentiment * 0.6) + (news_sentiment * 0.4))
-            
-        stance = "NEUTRAL"
-        if sentiment_score >= 70:
-            stance = "STRONGLY BULLISH"
-        elif sentiment_score >= 55:
-            stance = "BULLISH"
-        elif sentiment_score <= 30:
-            stance = "STRONGLY BEARISH"
-        elif sentiment_score <= 45:
-            stance = "BEARISH"
-
-        return jsonify({
-            "status": "success",
-            "sentiment_score": sentiment_score,
-            "tech_sentiment": tech_sentiment,
-            "news_sentiment": news_sentiment,
-            "stance": stance,
-            "top_movers": movers[:3], # Return top 3 volatile assets
-            "media_quotes": _compute_top_media_quotes(),
-            "timestamp": int(_time.time())
-        })
-
-    except Exception as e:
-        print("[Intelligence] Error: ", e)
-        return jsonify({"error": str(e)}), 500
+# Finance intelligence now handled on client via Intel.js
+# ...
 
 @app.route("/api/finance/factors")
 def get_finance_factors():

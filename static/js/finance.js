@@ -6,6 +6,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     initTheme();
     startClock();
     
+    let cachedArticles = []; // Local cache
+    
     // Mount TradingView Chart
     initTradingView();
     
@@ -126,8 +128,18 @@ window.toggleSize = function(cardId) {
 // ─── Intelligence & Movers ───────────────────────────
 async function loadIntelligence() {
     try {
-        const res = await fetch("/api/finance/intelligence");
-        const data = await res.json();
+        // 1. Get News Sentiment
+        const resFeed = await fetch("/api/feed");
+        const articles = await resFeed.json();
+        const newsSentiment = Intel.getNewsSentiment(articles);
+
+        // 2. Get Asset Histories
+        const symbols = ["^VNINDEX", "^GSPC", "BTC-USD", "GC=F", "CL=F"];
+        const resHist = await fetch(`/api/finance/history/bulk?symbols=${symbols.join(",")}&period=14d`);
+        const histories = await resHist.json();
+
+        // 3. Process on Client
+        const data = Intel.calculateMarketSentiment(histories, newsSentiment);
         
         let sentimentEl = document.getElementById("kpi-sentiment");
         let stanceEl = document.getElementById("kpi-stance");
@@ -176,7 +188,7 @@ async function loadIntelligence() {
                         <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
                         <div style="display:flex; flex-direction:column;">
                             <span class="stat-name">${m.symbol}</span>
-                            <span style="font-size:9px; color:var(--text-3);">${m.name}</span>
+                            <span style="font-size:9px; color:var(--text-3);">MARKET DRIVER</span>
                         </div>
                         <span class="stat-val" style="color:${color};">${sign}${m.percent_change.toFixed(2)}%</span>
                     </div>
@@ -187,19 +199,21 @@ async function loadIntelligence() {
             moversBody.innerHTML = '<div class="empty-state"><span>INSUFFICIENT DATA</span></div>';
         }
 
-        // Media Quotes
+        // Media Quotes (Ticker Mentions)
         const quotesBody = document.getElementById("finance-quotes-body");
-        if (data.media_quotes && data.media_quotes.length > 0) {
+        const quotesData = Intel.getTrending(articles).keywords.slice(0, 5);
+        
+        if (quotesData && quotesData.length > 0) {
             let html = "";
-            data.media_quotes.forEach((q, i) => {
+            quotesData.forEach((q, i) => {
                 html += `
                     <div class="finance-stat-row">
                         <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
                         <div style="display:flex; flex-direction:column;">
-                            <span class="stat-name">${q.symbol}</span>
+                            <span class="stat-name">${q.word.toUpperCase()}</span>
                             <span style="font-size:9px; color:var(--text-3);">TICKER MENTION</span>
                         </div>
-                        <span class="stat-val" style="color:var(--text-1);">${q.mentions} MSG</span>
+                        <span class="stat-val" style="color:var(--text-1);">${q.count} MSG</span>
                     </div>
                 `;
             });

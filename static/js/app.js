@@ -8,6 +8,7 @@ let flightMap = null;
 let flightMarkersLayer = null;
 let flightTileLayer = null;
 let flightRefreshTimer = null;
+let cachedArticles = []; // Cache for client-side processing
 
 // ─── Initialization ──────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
@@ -128,9 +129,78 @@ function startClock() {
 
 async function loadVNIndex() {
     try {
-        const res = await fetch("/api/finance/vnindex");
-        if (!res.ok) throw new Error("Failed to fetch VNINDEX");
-        const data = await res.json();
+        // Fetch raw history instead of processed indicators
+        const res = await fetch("/api/finance/vnindex/history?period=3mo");
+        if (!res.ok) throw new Error("Failed to fetch VNINDEX history");
+        const histData = await res.json();
+        const dataPoints = histData.data;
+        if (!dataPoints || dataPoints.length < 2) throw new Error("Insufficient history");
+
+        const closes = dataPoints.map(d => d.close);
+        const currentPrice = closes[closes.length - 1];
+        const prevClose = closes[closes.length - 2];
+        const change = currentPrice - prevClose;
+        const pctChange = (change / prevClose) * 100;
+        
+        // --- Compute Indicators Locally ---
+        const sma20 = Intel.sma(closes, 20);
+        const sma50 = Intel.sma(closes, 50);
+        const ema12 = Intel.ema(closes, 12);
+        const ema26 = Intel.ema(closes, 26);
+        const rsi14 = Intel.rsi(closes, 14);
+        const macdRes = Intel.macd(closes);
+        const bbRes = Intel.bollinger(closes);
+        const atrRes = Intel.atr(dataPoints.map(d => d.high || d.close), dataPoints.map(d => d.low || d.close), closes, 14);
+
+        // Derive signals
+        const signals = [];
+        const lastSma20 = sma20[sma20.length - 1];
+        const lastRsi14 = rsi14[rsi14.length - 1];
+        const lastMacdLine = macdRes.macdLine[macdRes.macdLine.length - 1];
+        const lastMacdSignal = macdRes.signalLine[macdRes.signalLine.length - 1];
+
+        if (currentPrice > lastSma20) signals.push("ABOVE SMA20");
+        else signals.push("BELOW SMA20");
+
+        if (lastRsi14 > 70) signals.push("OVERBOUGHT");
+        else if (lastRsi14 < 30) signals.push("OVERSOLD");
+        else signals.push("NEUTRAL RSI");
+
+        if (lastMacdLine > lastMacdSignal) signals.push("MACD BULLISH");
+        else signals.push("MACD BEARISH");
+
+        let bullishCount = signals.filter(s => s.includes("ABOVE") || s.includes("BULLISH") || s.includes("OVERSOLD")).length;
+        const overall = bullishCount >= 2 ? "BULLISH" : (bullishCount === 0 ? "BEARISH" : "NEUTRAL");
+
+        // Prepare data object for rendering
+        const data = {
+            price: currentPrice,
+            change: change,
+            percent_change: pctChange,
+            overall_signal: overall,
+            timestamp: dataPoints[dataPoints.length - 1].date,
+            open: dataPoints[dataPoints.length - 1].open || currentPrice,
+            high: dataPoints[dataPoints.length - 1].high || currentPrice,
+            low: dataPoints[dataPoints.length - 1].low || currentPrice,
+            volume: dataPoints[dataPoints.length - 1].volume,
+            low_period: Math.min(...closes),
+            high_period: Math.max(...closes),
+            indicators: {
+                rsi_14: lastRsi14,
+                macd: lastMacdLine,
+                macd_signal: lastMacdSignal,
+                macd_histogram: macdRes.histogram[macdRes.histogram.length - 1],
+                sma_20: lastSma20,
+                sma_50: sma50[sma50.length - 1],
+                ema_12: ema12[ema12.length - 1],
+                ema_26: ema26[ema26.length - 1],
+                bb_upper: bbRes.upper[bbRes.upper.length - 1],
+                bb_middle: bbRes.middle[bbRes.middle.length - 1],
+                bb_lower: bbRes.lower[bbRes.lower.length - 1],
+                atr_14: atrRes[atrRes.length - 1]
+            },
+            signals: signals
+        };
         
         // Hide loader, show data
         document.getElementById("vnindex-loading").style.display = "none";
@@ -430,8 +500,16 @@ async function loadTrending() {
     const loading = document.getElementById("trending-loading");
 
     try {
-        const res = await fetch("/api/trending");
-        const data = await res.json();
+        // Use cached articles if available, otherwise fetch
+        let articles = cachedArticles;
+        if (!articles.length) {
+            const res = await fetch("/api/feed");
+            articles = await res.json();
+            cachedArticles = articles;
+        }
+        
+        // Process on client
+        const data = Intel.getTrending(articles);
         loading.style.display = "none";
 
         document.getElementById("trending-article-count").textContent =
@@ -483,8 +561,16 @@ async function loadCountries() {
     const loading = document.getElementById("country-loading");
 
     try {
-        const res = await fetch("/api/countries");
-        const data = await res.json();
+        // Use cached articles if available
+        let articles = cachedArticles;
+        if (!articles.length) {
+            const res = await fetch("/api/feed");
+            articles = await res.json();
+            cachedArticles = articles;
+        }
+
+        // Process on client
+        const data = Intel.getCountryMentions(articles);
         loading.style.display = "none";
 
         document.getElementById("country-article-count").textContent =
@@ -542,6 +628,7 @@ async function loadFeed() {
     try {
         const res = await fetch("/api/feed");
         const articles = await res.json();
+        cachedArticles = articles; // Cache for other components
         loading.style.display = "none";
 
         document.getElementById("feed-count").textContent = `${articles.length} ITEMS`;
@@ -711,9 +798,22 @@ async function loadFinanceIntelligence() {
     if (!loading || !container) return;
 
     try {
-        const res = await fetch("/api/finance/intelligence");
-        if (!res.ok) throw new Error("Finance Intel API error");
-        const data = await res.json();
+        // 1. Get News Sentiment (use cached articles)
+        let articles = cachedArticles;
+        if (!articles.length) {
+            const res = await fetch("/api/feed");
+            articles = await res.json();
+            cachedArticles = articles;
+        }
+        const newsSentiment = Intel.getNewsSentiment(articles);
+
+        // 2. Get Asset Histories for Tech Sentiment
+        const symbols = ["^VNINDEX", "^GSPC", "BTC-USD", "GC=F", "CL=F"];
+        const res = await fetch(`/api/finance/history/bulk?symbols=${symbols.join(",")}&period=14d`);
+        const histories = await res.json();
+        
+        // 3. Process on Client
+        const data = Intel.calculateMarketSentiment(histories, newsSentiment);
         
         loading.style.display = "none";
         container.style.display = "flex";
@@ -738,7 +838,7 @@ async function loadFinanceIntelligence() {
         const moversEl = document.getElementById("intel-movers");
         moversEl.innerHTML = "";
         if (data.top_movers && data.top_movers.length > 0) {
-            data.top_movers.forEach(mover => {
+            data.top_movers.slice(0, 3).forEach(mover => {
                 const isUp = mover.change >= 0;
                 const color = isUp ? "#10b981" : "#ef4444";
                 const sign = isUp ? "+" : "";
@@ -749,8 +849,6 @@ async function loadFinanceIntelligence() {
                     </div>
                 `;
             });
-        } else {
-            moversEl.innerHTML = `<span style="font-size:0.8rem; color:var(--text-muted);">NOT ENOUGH DATA</span>`;
         }
 
     } catch (e) {
