@@ -29,16 +29,11 @@
 
 ---
 
-## 🏗️ Architecture
-
-```
-Browser ─→ Flask (app.py)
-              ├─ GET /             → Dashboard (news + maps)
-              ├─ GET /settings     → RSS source management
-              ├─ GET /api/feed     → feedparser → RSS sources
-              ├─ GET /api/flights  → OpenSky Network API (proxy)
-              └─ CRUD /api/sources → data/sources.json
-```
+Browser (Intel.js Analysis) ─→ Flask (app.py Proxy)
+                             ├─ GET /api/feed            → RSS Feeds
+                             ├─ GET /api/finance/history → Market Data
+                             ├─ GET /api/flights        → Live Flights
+                             └─ CRUD /api/sources       → data/sources.json
 
 ---
 
@@ -83,6 +78,13 @@ docker-compose up -d
 git clone https://github.com/GoSatoruu/reunion_rss.git
 cd reunion_rss
 
+# Create and activate virtual environment
+python -m venv venv
+# On Windows:
+.\venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -116,7 +118,11 @@ reunion_rss/
 │   ├── css/
 │   │   └── style.css       # Dark glassmorphism theme
 │   ├── js/
+│   │   ├── intel.js        # NEW: Client-side analytics & financial math
 │   │   ├── app.js          # Dashboard logic
+│   │   ├── finance.js      # Finance Intelligence logic
+│   │   ├── airline.js      # Aviation analytics
+│   │   ├── logistics.js    # Maritime analytics
 │   │   └── settings.js     # Settings CRUD logic
 │   └── img/                # Runtime logo copies
 ├── templates/
@@ -135,7 +141,9 @@ reunion_rss/
 | `POST` | `/api/sources` | Add a new RSS source (`{"name": "...", "url": "..."}`) |
 | `DELETE` | `/api/sources/<id>` | Remove an RSS source |
 | `GET` | `/api/feed` | Fetch aggregated articles from all sources |
-| `GET` | `/api/flights` | Proxy to OpenSky Network (optional bbox params: `lamin`, `lamax`, `lomin`, `lomax`) |
+| `GET` | `/api/finance/history/bulk` | RAW market data for multiple tickers at once |
+| `GET` | `/api/flights` | Raw flight states from OpenSky Network |
+| `GET` | `/api/vessels` | Raw nautical states from marine simulator |
 
 ---
 
