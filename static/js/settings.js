@@ -23,8 +23,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // Preferences toggles
     document.getElementById("toggle-flights").addEventListener("change", updateConfig);
     document.getElementById("toggle-ships").addEventListener("change", updateConfig);
+    document.getElementById("toggle-space").addEventListener("change", updateConfig);
     document.getElementById("flight-provider").addEventListener("change", updateConfig);
     
+    document.getElementById("btn-save-api-config")?.addEventListener("click", updateApiConfig);
+
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 });
 
@@ -54,11 +57,22 @@ async function loadConfig() {
         const config = await res.json();
         document.getElementById("toggle-flights").checked = config.enable_flights !== false;
         document.getElementById("toggle-ships").checked = config.enable_ships !== false;
+        document.getElementById("toggle-space").checked = config.enable_space !== false;
         
         const providerSelect = document.getElementById("flight-provider");
         if (providerSelect && config.flight_provider) {
             providerSelect.value = config.flight_provider;
         }
+
+        const llmApiUrl = document.getElementById("llm-api-url");
+        if (llmApiUrl && config.llm_api_url) llmApiUrl.value = config.llm_api_url;
+
+        const llmApiKey = document.getElementById("llm-api-key");
+        if (llmApiKey && config.llm_api_key) llmApiKey.value = config.llm_api_key;
+
+        const llmModel = document.getElementById("llm-model");
+        if (llmModel && config.llm_model) llmModel.value = config.llm_model;
+
     } catch (err) {
         console.error("Load config error:", err);
     }
@@ -68,13 +82,14 @@ async function loadConfig() {
 async function updateConfig() {
     const enable_flights = document.getElementById("toggle-flights").checked;
     const enable_ships = document.getElementById("toggle-ships").checked;
+    const enable_space = document.getElementById("toggle-space").checked;
     const flight_provider = document.getElementById("flight-provider")?.value || "opensky";
     
     try {
         const res = await fetch("/api/config", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ enable_flights, enable_ships, flight_provider })
+            body: JSON.stringify({ enable_flights, enable_ships, enable_space, flight_provider })
         });
         if (res.ok) {
             showToast("Preferences saved", "success");
@@ -84,6 +99,29 @@ async function updateConfig() {
     } catch (err) {
         console.error("Update config error:", err);
         showToast("Error saving preferences", "error");
+    }
+}
+
+// ─── Update API Configuration ────────────────────────
+async function updateApiConfig() {
+    const llm_api_url = document.getElementById("llm-api-url").value;
+    const llm_api_key = document.getElementById("llm-api-key").value;
+    const llm_model = document.getElementById("llm-model").value;
+
+    try {
+        const res = await fetch("/api/config", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ llm_api_url, llm_api_key, llm_model })
+        });
+        if (res.ok) {
+            showToast("API configurations saved", "success");
+        } else {
+            showToast("Failed to save API configurations", "error");
+        }
+    } catch (err) {
+        console.error("Update config error:", err);
+        showToast("Error saving API configurations", "error");
     }
 }
 

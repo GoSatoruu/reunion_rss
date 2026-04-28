@@ -13,7 +13,6 @@ let cachedArticles = []; // Cache for client-side processing
 // ─── Initialization ──────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
     initTheme();
-    startClock();
     loadVNIndex();
     loadFeed();
     loadTrending();
@@ -23,6 +22,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (document.getElementById("finance-intel-panel")) {
         loadFinanceIntelligence();
         setInterval(loadFinanceIntelligence, 60000); // 1 min auto-refresh
+    }
+    if (document.getElementById("space-panel")) {
+        loadSpaceLaunches();
+        setInterval(loadSpaceLaunches, 3600000); // 1 hour auto-refresh
     }
     
     // Check config before loading maps
@@ -110,17 +113,7 @@ async function loadConfig() {
     }
 }
 
-// ─── Clock ───────────────────────────────────────────
-function startClock() {
-    const el = document.getElementById("nav-clock");
-    function tick() {
-        const now = new Date();
-        el.textContent = now.toLocaleTimeString("en-GB", { hour12: false }) + " UTC+" +
-            String(Math.floor(-now.getTimezoneOffset() / 60)).padStart(2, "0");
-    }
-    tick();
-    setInterval(tick, 1000);
-}
+// ─── Clock logic moved to intel.js ───────────────────
 
 
 // ═══════════════════════════════════════════════════════
@@ -1006,4 +999,47 @@ function renderMacroSection(items) {
         `;
     });
     return html;
+}
+
+// ═══════════════════════════════════════════════════════
+// SPACE INTELLIGENCE (MINI WIDGET)
+// ═══════════════════════════════════════════════════════
+
+async function loadSpaceLaunches() {
+    const container = document.getElementById("launch-mini-container");
+    if (!container) return;
+
+    try {
+        const res = await fetch("/api/space/launches");
+        const data = await res.json();
+        const launches = data.results || [];
+        
+        container.innerHTML = "";
+        if (launches.length === 0) {
+            container.innerHTML = '<div class="empty-state"><span>NO UPCOMING LAUNCHES</span></div>';
+            return;
+        }
+
+        launches.slice(0, 5).forEach((launch, i) => {
+            const date = new Date(launch.window_start || launch.net);
+            const row = document.createElement("div");
+            row.className = "trend-row"; 
+            row.style.gridTemplateColumns = "1fr 80px";
+            row.style.padding = "8px 12px";
+            row.innerHTML = `
+                <div style="display:flex; flex-direction:column; overflow:hidden;">
+                    <div style="font-size:11px; font-weight:700; color:var(--text-0); white-space:nowrap; text-overflow:ellipsis; overflow:hidden;">${escapeHtml(launch.name)}</div>
+                    <div style="font-size:9px; color:var(--text-3); font-weight:700; letter-spacing:1px; text-transform:uppercase;">${escapeHtml(launch.launch_service_provider?.name || 'MISSION CONTROL')}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:10px; font-weight:700; color:var(--cyan);">${date.toLocaleDateString('en-GB', {day:'2-digit', month:'short'}).toUpperCase()}</div>
+                    <div style="font-size:9px; color:var(--text-3); font-family:var(--font-mono);">${date.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit', hour12:false})}</div>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+    } catch (err) {
+        console.error("Space launch mini error:", err);
+        container.innerHTML = '<div class="empty-state"><span>SYNC FAILED</span></div>';
+    }
 }

@@ -1,11 +1,13 @@
 /**
  * GVBC Reunion — Airline Intelligence Page
  * Full-page flight analytics with interactive map and statistics
+ * Supports: OpenSky Network, FlightRadar24, Local Simulator
  */
 
 let aMap = null;
 let aMarkersLayer = null;
 let aTileLayer = null;
+let currentProvider = "opensky";
 
 // ─── Init ────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -13,8 +15,8 @@ document.addEventListener("DOMContentLoaded", () => {
     initAirlineMap();
     loadFlightDataAndStats();
 
-    // Auto-refresh every 30s (aligned with server cache TTL)
-    setInterval(loadFlightDataAndStats, 30000);
+    // Auto-refresh every 15s for FR24, 30s for others
+    setInterval(loadFlightDataAndStats, 15000);
 
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);
 });
@@ -78,26 +80,31 @@ function initAirlineMap() {
 // ─── Load Data ───────────────────────────────────────
 async function loadFlightDataAndStats() {
     try {
-        // Fetch flights + stats concurrently
-        const [flightsRes, statsRes] = await Promise.allSettled([
-            fetch("/api/flights"),
-            fetch("/api/flights/stats"),
-        ]);
+        const res = await fetch("/api/flights");
 
-        // Render flights on map
-        if (flightsRes.status === "fulfilled" && flightsRes.value.ok) {
-            const flightData = await flightsRes.value.json();
-            renderFlightsOnMap(flightData.flights || []);
-        }
+        if (res.ok) {
+            const flightData = await res.json();
+            const flights = flightData.flights || [];
+            currentProvider = flightData.provider || "opensky";
 
-        // Render stats
-        if (statsRes.status === "fulfilled" && statsRes.value.ok) {
-            const stats = await statsRes.value.json();
+            // Render flights on map
+            renderFlightsOnMap(flights);
+
+            // Compute stats client-side using Intel.js
+            const stats = Intel.getFlightStats(flights);
             renderKPIs(stats);
             renderCountries(stats.countries || []);
             renderAltitude(stats.altitude_distribution || {});
             renderRegions(stats.regions || {});
             renderCallsigns(stats.top_callsigns || []);
+
+            // Update providers info strip
+            updateProviderBadge(currentProvider, flights.length);
+
+            // Render FR24 enriched data (route info) if available
+            if (currentProvider === "flightradar24") {
+                renderTopRoutes(flights);
+            }
         }
 
         // Hide loader
@@ -150,11 +157,23 @@ function renderFlightsOnMap(flights) {
             iconAnchor: [7, 7],
         });
 
+        // Build enriched popup for FR24 data
+        let popupExtra = "";
+        if (f.origin && f.destination) {
+            popupExtra += `<br>✈ ${f.origin} → ${f.destination}`;
+        }
+        if (f.aircraft_code) {
+            popupExtra += `<br>🛩️ ${f.aircraft_code}`;
+        }
+        if (f.registration) {
+            popupExtra += `<br>📋 REG: ${f.registration}`;
+        }
+
         const marker = L.marker([f.lat, f.lon], { icon }).addTo(aMarkersLayer);
         marker.bindPopup(`
             <div style="font-family:var(--font-mono);font-size:11px;line-height:1.6;">
                 <strong style="color:#22d3ee;">${f.callsign || f.icao24}</strong><br>
-                🌍 ${f.country}<br>
+                🌍 ${f.country}${popupExtra}<br>
                 📏 ALT: ${altStr}<br>
                 ⚡ SPD: ${speed}<br>
                 🧭 HDG: ${Math.round(heading)}°
@@ -280,6 +299,83 @@ function renderCallsigns(callsigns) {
     });
     html += '</div>';
     container.innerHTML = html;
+}
+
+
+// ─── Top Routes (FR24 enriched data) ─────────────────
+function renderTopRoutes(flights) {
+    const panel = document.getElementById("airline-routes-panel");
+    if (!panel) return;
+
+    const routeCounts = {};
+    flights.forEach(f => {
+        if (f.origin && f.destination) {
+            const route = `${f.origin} → ${f.destination}`;
+            routeCounts[route] = (routeCounts[route] || 0) + 1;
+        }
+    });
+
+    const topRoutes = Object.entries(routeCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 12);
+
+    const body = panel.querySelector(".panel-body") || panel;
+    const loading = panel.querySelector(".panel-loading");
+    if (loading) loading.style.display = "none";
+
+    if (!topRoutes.length) {
+        body.innerHTML = '<div class="empty-state"><span>NO ROUTE DATA</span></div>';
+        return;
+    }
+
+    const maxCount = topRoutes[0][1];
+    let html = '';
+    topRoutes.forEach(([route, count], i) => {
+        const pct = Math.round((count / maxCount) * 100);
+        html += `
+            <div class="airline-stat-row">
+                <span class="stat-rank">${String(i + 1).padStart(2, "0")}</span>
+                <span class="stat-name">${escapeHtml(route)}</span>
+                <span class="stat-count">${count}</span>
+                <div class="stat-bar-cell">
+                    <div class="stat-bar" style="width:${pct}%"></div>
+                </div>
+            </div>
+        `;
+    });
+    body.innerHTML = html;
+}
+
+
+// ─── Provider Badge ──────────────────────────────────
+function updateProviderBadge(provider, count) {
+    const providerNames = {
+        "opensky": "OPENSKY NETWORK",
+        "flightradar24": "FLIGHTRADAR24",
+        "mock": "LOCAL SIMULATOR",
+        "error": "ERROR — OFFLINE"
+    };
+
+    const footerSpan = document.querySelector("#status-bar .status-left span");
+    if (footerSpan) {
+        footerSpan.textContent = `AIRLINE INTELLIGENCE MODULE — ${providerNames[provider] || provider.toUpperCase()} — ${count.toLocaleString()} TRACKED`;
+    }
+
+    // Update map header with provider badge
+    const providerBadge = document.getElementById("provider-badge");
+    if (providerBadge) {
+        const color = provider === "flightradar24" ? "#f59e0b" 
+                    : provider === "opensky" ? "#22c55e" 
+                    : provider === "mock" ? "#8b5cf6" 
+                    : "#ef4444";
+        providerBadge.innerHTML = `<span style="color:${color};font-weight:700;letter-spacing:1px;">${providerNames[provider] || "UNKNOWN"}</span>`;
+    }
+
+    // Show/hide FR24 routes panel
+    const routesPanel = document.getElementById("airline-routes-panel");
+    if (routesPanel) {
+        routesPanel.style.display = (provider === "flightradar24") ? "block" : "none";
+    }
 }
 
 

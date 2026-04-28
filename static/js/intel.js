@@ -507,3 +507,32 @@ const Intel = {
 };
 
 window.Intel = Intel;
+
+// ─── Global Dashboard Clocks ──────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+    function tickClock() {
+        const now = new Date();
+        const localEl = document.getElementById("nav-clock-local");
+        const utcEl = document.getElementById("nav-clock-utc");
+        const tyoEl = document.getElementById("nav-clock-tyo");
+        const nycEl = document.getElementById("nav-clock-nyc");
+        const legacyEl = document.getElementById("nav-clock");
+
+        if (localEl || legacyEl) {
+            const timeLocal = now.toLocaleTimeString("en-GB", { hour12: false }) + " UTC+" + String(Math.floor(-now.getTimezoneOffset() / 60)).padStart(2, "0");
+            if (localEl) localEl.textContent = timeLocal;
+            if (legacyEl) legacyEl.textContent = timeLocal;
+        }
+        if (utcEl) {
+            utcEl.textContent = now.toLocaleTimeString("en-GB", { timeZone: "UTC", hour12: false }) + " UTC";
+        }
+        if (tyoEl) {
+            try { tyoEl.textContent = now.toLocaleTimeString("en-GB", { timeZone: "Asia/Tokyo", hour12: false }) + " TYO"; } catch(e){}
+        }
+        if (nycEl) {
+            try { nycEl.textContent = now.toLocaleTimeString("en-GB", { timeZone: "America/New_York", hour12: false }) + " NYC"; } catch(e){}
+        }
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+});

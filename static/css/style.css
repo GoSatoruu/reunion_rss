@@ -6,18 +6,18 @@
 
 /* ── Variables (Palantir Dark Theme) ────────────────── */
 :root {
-    --bg-0:             #0b0e11;
-    --bg-1:             #0f1318;
-    --bg-2:             #151a21;
-    --bg-3:             #1a2029;
-    --bg-panel:         #111820;
-    --bg-row:           rgba(21, 26, 33, 0.6);
-    --bg-row-hover:     rgba(30, 38, 50, 0.8);
+    --bg-0:             #090b0e;
+    --bg-1:             #0d1116;
+    --bg-2:             #131820;
+    --bg-3:             #181e28;
+    --bg-panel:         #0f141a;
+    --bg-row:           rgba(19, 24, 32, 0.6);
+    --bg-row-hover:     rgba(28, 36, 48, 0.8);
 
-    --text-0:           #e8ecf1;
-    --text-1:           #a4b0be;
-    --text-2:           #6b7a8d;
-    --text-3:           #3d4f63;
+    --text-0:           #ffffff;
+    --text-1:           #f1f5f9;
+    --text-2:           #cbd5e1;
+    --text-3:           #94a3b8;
 
     --accent:           #b91c1c;
     --accent-bright:    #ef4444;

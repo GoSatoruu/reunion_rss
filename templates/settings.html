@@ -24,6 +24,8 @@
             <a href="/finance" class="nav-link" id="nav-finance">FINANCE INTEL</a>
             <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
             <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/space" class="nav-link" id="nav-space">SPACE INTEL</a>
+            <a href="/social" class="nav-link" id="nav-social">SOCIAL LISTENING</a>
             <a href="/settings" class="nav-link active" id="nav-settings">SETTINGS</a>
             <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
         </div>
@@ -50,6 +52,7 @@
                             </div>
                             <div class="form-group" style="margin: 0; min-width: 200px;">
                                 <select id="flight-provider" class="p-select" style="width: 100%; border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); padding: 4px 8px; font-family: var(--font-mono); font-size: 11px;">
+                                    <option value="flightradar24">FlightRadar24 (Live — Best Coverage)</option>
                                     <option value="opensky">OpenSky Network (Live)</option>
                                     <option value="mock">Local Simulator (Demo)</option>
                                 </select>
@@ -74,6 +77,60 @@
                                 <input type="checkbox" id="toggle-ships" checked>
                                 <span class="slider"></span>
                             </label>
+                        </div>
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">Space Intelligence</div>
+                                <div class="pref-desc">Show the upcoming launches widget on the dashboard.</div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-space" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Configurations Panel -->
+            <div class="panel" style="margin-bottom: 24px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        API CONFIGURATIONS
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="preferences-list">
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">LLM API Base URL</div>
+                                <div class="pref-desc">URL for OpenAI-compatible API (e.g., local LM Studio).</div>
+                            </div>
+                            <div class="form-group" style="margin: 0; min-width: 250px;">
+                                <input type="text" id="llm-api-url" class="p-select" style="width: 100%; border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); padding: 4px 8px; font-family: var(--font-mono); font-size: 11px;" placeholder="http://localhost:1234/v1">
+                            </div>
+                        </div>
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">LLM API Key</div>
+                                <div class="pref-desc">API Key (optional for local LM Studio).</div>
+                            </div>
+                            <div class="form-group" style="margin: 0; min-width: 250px;">
+                                <input type="text" id="llm-api-key" class="p-select" style="width: 100%; border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); padding: 4px 8px; font-family: var(--font-mono); font-size: 11px;" placeholder="lm-studio">
+                            </div>
+                        </div>
+                        <div class="preference-item">
+                            <div class="pref-info">
+                                <div class="pref-title">LLM Model Name</div>
+                                <div class="pref-desc">Model identifier to use.</div>
+                            </div>
+                            <div class="form-group" style="margin: 0; min-width: 250px;">
+                                <input type="text" id="llm-model" class="p-select" style="width: 100%; border: 1px solid var(--border); background: var(--bg-0); color: var(--text-1); padding: 4px 8px; font-family: var(--font-mono); font-size: 11px;" placeholder="local-model">
+                            </div>
+                        </div>
+                        <div class="preference-item" style="justify-content: flex-end;">
+                            <button class="p-btn p-btn-primary" id="btn-save-api-config">SAVE API SETTINGS</button>
                         </div>
                     </div>
                 </div>

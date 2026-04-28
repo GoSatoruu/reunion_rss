@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GVBC Reunion — Mission Control Center: Real-time space situational awareness">
+    <title>GVBC Reunion — Mission Control Center</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════
+           MISSION CONTROL CENTER — Full Override
+           NASA/JPL-inspired command interface
+           ═══════════════════════════════════════════════════════ */
+
+        /* ── Color Palette Extensions ────────────────────────── */
+        :root {
+            --mcc-purple: #a855f7;
+            --mcc-purple-dim: rgba(168, 85, 247, 0.12);
+            --mcc-purple-glow: rgba(168, 85, 247, 0.4);
+            --mcc-blue: #3b82f6;
+            --mcc-blue-dim: rgba(59, 130, 246, 0.12);
+            --mcc-indigo: #6366f1;
+            --mcc-teal: #14b8a6;
+            --mcc-orange: #f97316;
+        }
+
+        /* ── Mission Control Layout ──────────────────────────── */
+        #mcc-page {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 48px - 28px);
+            overflow: hidden;
+        }
+
+        /* ── Sub-Nav Tab Bar ─────────────────────────────────── */
+        .mcc-tabs {
+            display: flex;
+            align-items: stretch;
+            background: var(--bg-1);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            gap: 0;
+            flex-shrink: 0;
+            overflow-x: auto;
+        }
+        .mcc-tab {
+            padding: 10px 20px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: var(--transition);
+            font-family: var(--font-mono);
+            white-space: nowrap;
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: none;
+            border-top: none;
+            border-left: none;
+            border-right: none;
+        }
+        .mcc-tab:hover {
+            color: var(--text-1);
+            background: var(--bg-2);
+        }
+        .mcc-tab.active {
+            color: var(--mcc-purple);
+            border-bottom-color: var(--mcc-purple);
+            background: var(--mcc-purple-dim);
+        }
+        .mcc-tab-icon {
+            font-size: 13px;
+        }
+        .mcc-tab-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 4px var(--green);
+            animation: blink-dot 2s ease-in-out infinite;
+        }
+
+        /* ── Tab Content Area ────────────────────────────────── */
+        .mcc-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+        .mcc-panel {
+            display: none;
+        }
+        .mcc-panel.active {
+            display: block;
+            animation: mccFadeIn 0.3s ease;
+        }
+
+        @keyframes mccFadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TAB 1: MISSION OVERVIEW
+           ═══════════════════════════════════════════════════════ */
+
+        /* KPI Hero Strip */
+        .mcc-kpi-strip {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .mcc-kpi {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        .mcc-kpi::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--mcc-purple), transparent);
+        }
+        .mcc-kpi:nth-child(2)::before { background: linear-gradient(90deg, var(--cyan), transparent); }
+        .mcc-kpi:nth-child(3)::before { background: linear-gradient(90deg, var(--green), transparent); }
+        .mcc-kpi:nth-child(4)::before { background: linear-gradient(90deg, var(--mcc-blue), transparent); }
+        .mcc-kpi:nth-child(5)::before { background: linear-gradient(90deg, var(--amber), transparent); }
+        .mcc-kpi:nth-child(6)::before { background: linear-gradient(90deg, var(--mcc-teal), transparent); }
+        .mcc-kpi-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+        }
+        .mcc-kpi-value {
+            font-size: 28px;
+            font-weight: 300;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            line-height: 1.2;
+            transition: all 0.5s ease;
+        }
+        .mcc-kpi-sub {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+
+        /* Mission Overview Grid */
+        .mcc-overview-grid {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 16px;
+        }
+
+        /* Next Launch Spotlight */
+        .mcc-spotlight {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .mcc-spotlight-hero {
+            height: 220px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+        }
+        .mcc-spotlight-hero::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(transparent 30%, rgba(9, 11, 14, 0.92));
+        }
+        .mcc-spotlight-info {
+            position: relative;
+            z-index: 1;
+            padding: 16px;
+            width: 100%;
+        }
+        .mcc-spotlight-provider {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--mcc-purple);
+            margin-bottom: 4px;
+        }
+        .mcc-spotlight-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-0);
+            margin-bottom: 8px;
+        }
+        .mcc-spotlight-countdown {
+            display: flex;
+            gap: 12px;
+        }
+        .mcc-cd-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(168, 85, 247, 0.08);
+            border: 1px solid var(--mcc-purple-glow);
+            padding: 6px 12px;
+            min-width: 56px;
+        }
+        .mcc-cd-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            line-height: 1.1;
+        }
+        .mcc-cd-label {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-3);
+        }
+        .mcc-spotlight-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 14px 16px;
+            border-top: 1px solid var(--border);
+        }
+        .mcc-meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-meta-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-3);
+            letter-spacing: 1.5px;
+        }
+        .mcc-meta-val {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-1);
+            font-family: var(--font-mono);
+        }
+
+        /* Sidebar panels */
+        .mcc-sidebar-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* DSN Mini Status */
+        .mcc-dsn-mini {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .mcc-dsn-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .mcc-dsn-row:hover { background: var(--bg-row-hover); }
+        .mcc-dsn-antenna {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .mcc-dsn-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        .mcc-dsn-facility {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-1);
+            letter-spacing: 0.5px;
+        }
+        .mcc-dsn-target {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--cyan);
+            font-family: var(--font-mono);
+        }
+        .mcc-dsn-signal {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 0.5px;
+        }
+        .mcc-dsn-status {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 3px 8px;
+        }
+        .mcc-dsn-status.active {
+            color: var(--green);
+            background: var(--green-dim);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .mcc-dsn-status.transmitting {
+            color: var(--amber);
+            background: var(--amber-dim);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* ISS Tracker Mini */
+        .mcc-iss-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+        }
+        .mcc-iss-icon {
+            font-size: 28px;
+        }
+        .mcc-iss-data {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-iss-coords {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+        }
+        .mcc-iss-altitude {
+            font-size: 10px;
+            color: var(--text-2);
+        }
+        .mcc-iss-crew {
+            font-size: 9px;
+            color: var(--mcc-purple);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TAB 2: LAUNCHES
+           ═══════════════════════════════════════════════════════ */
+        .mcc-launch-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 12px;
+        }
+        .mcc-launch-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .mcc-launch-card:hover {
+            border-color: var(--mcc-purple);
+            box-shadow: 0 0 20px var(--mcc-purple-dim);
+        }
+        .mcc-launch-hero {
+            height: 160px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            border-bottom: 1px solid var(--border);
+        }
+        .mcc-launch-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 3px 10px;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .mcc-launch-badge.go {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+        .mcc-launch-badge.tbd {
+            background: var(--amber-dim);
+            color: var(--amber);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .mcc-launch-badge.tbc {
+            background: var(--mcc-blue-dim);
+            color: var(--mcc-blue);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }
+        .mcc-launch-countdown {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(9, 11, 14, 0.85);
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .mcc-launch-cd-prefix {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--mcc-purple);
+        }
+        .mcc-launch-cd-timer {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            letter-spacing: 1px;
+        }
+        .mcc-launch-body {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex: 1;
+        }
+        .mcc-launch-provider {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-3);
+            text-transform: uppercase;
+        }
+        .mcc-launch-name {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-0);
+        }
+        .mcc-launch-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: auto;
+        }
+        .mcc-launch-detail {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-launch-detail-label {
+            font-size: 8px;
+            font-weight: 700;
+            color: var(--text-3);
+            letter-spacing: 1.5px;
+        }
+        .mcc-launch-detail-val {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-1);
+            font-family: var(--font-mono);
+        }
+        .mcc-launch-mission {
+            font-size: 11px;
+            color: var(--text-2);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-family: var(--font-sans);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TAB 3: ORBITAL ASSETS
+           ═══════════════════════════════════════════════════════ */
+        .mcc-orbit-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 16px;
+        }
+
+        /* Donut chart container */
+        .mcc-donut-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+        .mcc-donut-wrap canvas {
+            max-width: 280px;
+            max-height: 280px;
+        }
+        .mcc-donut-center {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+        }
+        .mcc-donut-total {
+            font-size: 32px;
+            font-weight: 300;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+        }
+        .mcc-donut-total-label {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 2px;
+            font-weight: 700;
+        }
+
+        /* Constellation list */
+        .mcc-constellation-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        .mcc-const-row {
+            display: grid;
+            grid-template-columns: 6px 1fr 80px 120px;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.3);
+            transition: var(--transition);
+            font-size: 12px;
+        }
+        .mcc-const-row:hover { background: var(--bg-row-hover); }
+        .mcc-const-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+        .mcc-const-name {
+            font-weight: 600;
+            color: var(--text-1);
+            letter-spacing: 0.5px;
+        }
+        .mcc-const-count {
+            text-align: right;
+            font-weight: 700;
+            color: var(--cyan);
+            font-family: var(--font-mono);
+        }
+        .mcc-const-bar-track {
+            height: 4px;
+            background: var(--bg-3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .mcc-const-bar-fill {
+            height: 100%;
+            transition: width 0.8s ease;
+            border-radius: 2px;
+        }
+
+        /* Orbit Type Summary */
+        .mcc-orbit-types {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 16px;
+        }
+        .mcc-orbit-type-card {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            padding: 14px;
+            text-align: center;
+        }
+        .mcc-orbit-type-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+            margin-bottom: 6px;
+        }
+        .mcc-orbit-type-val {
+            font-size: 20px;
+            font-weight: 300;
+            font-family: var(--font-mono);
+            color: var(--text-0);
+        }
+        .mcc-orbit-type-range {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TAB 4: DEEP SPACE NETWORK
+           ═══════════════════════════════════════════════════════ */
+        .mcc-dsn-layout {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .mcc-dsn-complex {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .mcc-dsn-complex-header {
+            padding: 12px 16px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .mcc-dsn-complex-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 1px;
+        }
+        .mcc-dsn-complex-loc {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1.5px;
+        }
+        .mcc-dsn-complex-body {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Antenna visual */
+        .mcc-antenna-visual {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            position: relative;
+            overflow: hidden;
+        }
+        .mcc-antenna-visual::after {
+            content: "";
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+        }
+        .mcc-antenna-visual.tracking::after {
+            background: linear-gradient(90deg, transparent, var(--green), transparent);
+            animation: antennaSignalPulse 2s ease infinite;
+        }
+        .mcc-antenna-visual.transmitting::after {
+            background: linear-gradient(90deg, transparent, var(--amber), transparent);
+            animation: antennaSignalPulse 1.5s ease infinite;
+        }
+        .mcc-antenna-visual.idle::after {
+            background: linear-gradient(90deg, transparent, var(--text-3), transparent);
+        }
+
+        @keyframes antennaSignalPulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .mcc-antenna-dish {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .mcc-antenna-dish svg {
+            width: 32px;
+            height: 32px;
+        }
+        .mcc-antenna-dish .signal-rings {
+            position: absolute;
+            top: 2px;
+            right: -4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-signal-ring {
+            width: 8px;
+            height: 2px;
+            border-radius: 1px;
+            animation: signalBlink 1.5s ease infinite;
+        }
+        .mcc-signal-ring:nth-child(1) { animation-delay: 0s; }
+        .mcc-signal-ring:nth-child(2) { animation-delay: 0.3s; width: 6px; }
+        .mcc-signal-ring:nth-child(3) { animation-delay: 0.6s; width: 4px; }
+
+        @keyframes signalBlink {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 1; }
+        }
+
+        .mcc-antenna-data {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-antenna-id {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-1);
+            letter-spacing: 1px;
+        }
+        .mcc-antenna-target-label {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+        .mcc-antenna-target-name {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--cyan);
+            font-family: var(--font-mono);
+        }
+        .mcc-antenna-meta {
+            display: flex;
+            gap: 12px;
+            margin-top: 2px;
+        }
+        .mcc-antenna-meta span {
+            font-size: 9px;
+            color: var(--text-3);
+        }
+
+        /* NSN Status Banner */
+        .mcc-nsn-banner {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .mcc-nsn-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .mcc-nsn-icon {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+        }
+        .mcc-nsn-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .mcc-nsn-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 0.5px;
+        }
+        .mcc-nsn-status {
+            font-size: 10px;
+            color: var(--green);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .mcc-nsn-links {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+        }
+
+        /* ═══════════════════════════════════════════════════════
+           TAB 5: SPACE WEATHER
+           ═══════════════════════════════════════════════════════ */
+        .mcc-weather-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .mcc-wx-card {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .mcc-wx-card::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+        }
+        .mcc-wx-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        .mcc-wx-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--text-3);
+        }
+        .mcc-wx-value {
+            font-size: 26px;
+            font-weight: 300;
+            color: var(--text-0);
+            font-family: var(--font-mono);
+            line-height: 1.1;
+        }
+        .mcc-wx-unit {
+            font-size: 10px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+        .mcc-wx-status {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 3px 8px;
+            display: inline-flex;
+            align-self: flex-start;
+        }
+        .mcc-wx-status.nominal {
+            color: var(--green);
+            background: var(--green-dim);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .mcc-wx-status.elevated {
+            color: var(--amber);
+            background: var(--amber-dim);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .mcc-wx-status.storm {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Solar Activity Panel */
+        .mcc-solar-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .mcc-solar-panel {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+        }
+        .mcc-solar-header {
+            padding: 10px 14px;
+            background: var(--bg-2);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-1);
+        }
+        .mcc-solar-body {
+            padding: 14px;
+        }
+        .mcc-scale-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .mcc-scale-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .mcc-scale-bar-wrap {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-3);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .mcc-scale-bar {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+        .mcc-scale-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text-2);
+            min-width: 80px;
+        }
+        .mcc-scale-level {
+            font-size: 10px;
+            font-weight: 700;
+            min-width: 30px;
+            text-align: right;
+            font-family: var(--font-mono);
+        }
+
+        /* ── Loading Overlay ───────────────────────────────── */
+        .mcc-loading-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(5, 10, 16, 0.92);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            z-index: 1000;
+            color: var(--text-2);
+            font-size: 11px;
+            letter-spacing: 2px;
+        }
+        .mcc-loading-overlay .mcc-load-ring {
+            width: 48px;
+            height: 48px;
+            border: 2px solid var(--border);
+            border-top-color: var(--mcc-purple);
+            border-right-color: var(--mcc-purple);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .mcc-loading-overlay .mcc-load-steps {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            color: var(--text-3);
+        }
+        .mcc-load-step {
+            transition: color 0.3s ease;
+        }
+        .mcc-load-step.done {
+            color: var(--green);
+        }
+
+        /* ── Responsive ──────────────────────────────────────── */
+        @media (max-width: 1200px) {
+            .mcc-kpi-strip { grid-template-columns: repeat(3, 1fr); }
+            .mcc-overview-grid { grid-template-columns: 1fr; }
+            .mcc-orbit-layout { grid-template-columns: 1fr; }
+            .mcc-dsn-layout { grid-template-columns: 1fr; }
+            .mcc-solar-layout { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .mcc-kpi-strip { grid-template-columns: repeat(2, 1fr); }
+            .mcc-weather-grid { grid-template-columns: repeat(2, 1fr); }
+            .mcc-launch-grid { grid-template-columns: 1fr; }
+            .mcc-nsn-banner { grid-template-columns: 1fr; }
+            .mcc-orbit-types { grid-template-columns: 1fr; }
+            .mcc-tabs { padding: 0 8px; }
+            .mcc-tab { padding: 8px 12px; font-size: 9px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- ───── TOP BAR ───── -->
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/finance" class="nav-link" id="nav-finance">FINANCE INTEL</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/space" class="nav-link active" id="nav-space">SPACE INTEL</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
+            <span class="nav-clock" id="nav-clock"></span>
+        </div>
+    </nav>
+
+    <!-- ───── LOADING OVERLAY ───── -->
+    <div class="mcc-loading-overlay" id="mcc-loader">
+        <div class="mcc-load-ring"></div>
+        <span>MISSION CONTROL CENTER</span>
+        <div class="mcc-load-steps">
+            <span class="mcc-load-step" id="load-step-1">▸ INITIALIZING SUBSYSTEMS</span>
+            <span class="mcc-load-step" id="load-step-2">▸ FETCHING LAUNCH MANIFEST</span>
+            <span class="mcc-load-step" id="load-step-3">▸ ACQUIRING ORBITAL DATA</span>
+            <span class="mcc-load-step" id="load-step-4">▸ CONNECTING TO DSN</span>
+            <span class="mcc-load-step" id="load-step-5">▸ SYNCING SPACE WEATHER</span>
+        </div>
+    </div>
+
+    <!-- ───── MAIN CONTENT ───── -->
+    <main id="mcc-page">
+
+        <!-- TAB BAR -->
+        <div class="mcc-tabs" id="mcc-tab-bar">
+            <button class="mcc-tab active" data-tab="overview" id="tab-overview">
+                <span class="mcc-tab-icon">🛰️</span>
+                MISSION OVERVIEW
+                <span class="mcc-tab-dot"></span>
+            </button>
+            <button class="mcc-tab" data-tab="launches" id="tab-launches">
+                <span class="mcc-tab-icon">🚀</span>
+                LAUNCHES
+            </button>
+            <button class="mcc-tab" data-tab="orbital" id="tab-orbital">
+                <span class="mcc-tab-icon">🌍</span>
+                ORBITAL ASSETS
+            </button>
+            <button class="mcc-tab" data-tab="dsn" id="tab-dsn">
+                <span class="mcc-tab-icon">📡</span>
+                DEEP SPACE NETWORK
+            </button>
+            <button class="mcc-tab" data-tab="weather" id="tab-weather">
+                <span class="mcc-tab-icon">☀️</span>
+                SPACE WEATHER
+            </button>
+        </div>
+
+        <!-- TAB CONTENT -->
+        <div class="mcc-content">
+
+            <!-- ════════ TAB: MISSION OVERVIEW ════════ -->
+            <div class="mcc-panel active" id="panel-overview">
+
+                <!-- KPI Strip -->
+                <div class="mcc-kpi-strip">
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">ORBITAL OBJECTS</span>
+                        <span class="mcc-kpi-value" id="kpi-total-sats">—</span>
+                        <span class="mcc-kpi-sub">ACTIVE SATELLITES</span>
+                    </div>
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">UPCOMING</span>
+                        <span class="mcc-kpi-value" id="kpi-upcoming">—</span>
+                        <span class="mcc-kpi-sub">SCHEDULED LAUNCHES</span>
+                    </div>
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">ISS ALTITUDE</span>
+                        <span class="mcc-kpi-value" id="kpi-iss-alt">420</span>
+                        <span class="mcc-kpi-sub">KM ABOVE EARTH</span>
+                    </div>
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">DSN ACTIVE</span>
+                        <span class="mcc-kpi-value" id="kpi-dsn-active">—</span>
+                        <span class="mcc-kpi-sub">ANTENNA LINKS</span>
+                    </div>
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">SOLAR WIND</span>
+                        <span class="mcc-kpi-value" id="kpi-solar-wind">—</span>
+                        <span class="mcc-kpi-sub">KM/S VELOCITY</span>
+                    </div>
+                    <div class="mcc-kpi">
+                        <span class="mcc-kpi-label">MISSION ELAPSED</span>
+                        <span class="mcc-kpi-value" id="kpi-met">—</span>
+                        <span class="mcc-kpi-sub">UTC TIME</span>
+                    </div>
+                </div>
+
+                <!-- Main Content -->
+                <div class="mcc-overview-grid">
+                    <!-- Next Launch Spotlight -->
+                    <div>
+                        <div class="mcc-spotlight" id="next-launch-spotlight">
+                            <div class="mcc-spotlight-hero" id="spotlight-hero" style="background-image: url('https://images.unsplash.com/photo-1517976487492-5750f3195933?auto=format&fit=crop&q=80&w=800')">
+                                <div class="mcc-spotlight-info">
+                                    <div class="mcc-spotlight-provider" id="spotlight-provider">LOADING...</div>
+                                    <div class="mcc-spotlight-name" id="spotlight-name">Next Mission</div>
+                                    <div class="mcc-spotlight-countdown" id="spotlight-countdown">
+                                        <div class="mcc-cd-block"><span class="mcc-cd-val" id="cd-days">--</span><span class="mcc-cd-label">DAYS</span></div>
+                                        <div class="mcc-cd-block"><span class="mcc-cd-val" id="cd-hours">--</span><span class="mcc-cd-label">HRS</span></div>
+                                        <div class="mcc-cd-block"><span class="mcc-cd-val" id="cd-mins">--</span><span class="mcc-cd-label">MIN</span></div>
+                                        <div class="mcc-cd-block"><span class="mcc-cd-val" id="cd-secs">--</span><span class="mcc-cd-label">SEC</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mcc-spotlight-meta" id="spotlight-meta">
+                                <div class="mcc-meta-item">
+                                    <span class="mcc-meta-label">LAUNCH DATE (UTC)</span>
+                                    <span class="mcc-meta-val" id="spotlight-date">—</span>
+                                </div>
+                                <div class="mcc-meta-item">
+                                    <span class="mcc-meta-label">LAUNCH PAD</span>
+                                    <span class="mcc-meta-val" id="spotlight-pad">—</span>
+                                </div>
+                                <div class="mcc-meta-item">
+                                    <span class="mcc-meta-label">VEHICLE</span>
+                                    <span class="mcc-meta-val" id="spotlight-vehicle">—</span>
+                                </div>
+                                <div class="mcc-meta-item">
+                                    <span class="mcc-meta-label">STATUS</span>
+                                    <span class="mcc-meta-val" id="spotlight-status">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ISS Tracker -->
+                        <section class="panel" style="margin-top: 12px;">
+                            <div class="panel-header">
+                                <div class="panel-label">
+                                    <span class="panel-indicator indicator-live" style="background:var(--mcc-teal);box-shadow:0 0 6px var(--mcc-teal);"></span>
+                                    ISS REAL-TIME POSITION
+                                </div>
+                            </div>
+                            <div class="mcc-iss-card" id="iss-tracker">
+                                <span class="mcc-iss-icon">🛸</span>
+                                <div class="mcc-iss-data">
+                                    <span class="mcc-iss-coords" id="iss-coords">LAT: — / LON: —</span>
+                                    <span class="mcc-iss-altitude" id="iss-alt-detail">ALTITUDE: ~420 KM · SPEED: 27,600 KM/H</span>
+                                    <span class="mcc-iss-crew" id="iss-crew">CREW: UPDATING...</span>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <!-- Sidebar -->
+                    <div class="mcc-sidebar-stack">
+                        <!-- DSN Quick Status -->
+                        <section class="panel">
+                            <div class="panel-header">
+                                <div class="panel-label">
+                                    <span class="panel-indicator indicator-live" style="background:var(--mcc-purple);box-shadow:0 0 6px var(--mcc-purple);"></span>
+                                    DSN STATUS
+                                </div>
+                                <button class="p-btn p-btn-sm" onclick="MCC.switchTab('dsn')" style="color:var(--mcc-purple);border-color:var(--mcc-purple);">FULL VIEW</button>
+                            </div>
+                            <div class="panel-body" style="padding: 8px;">
+                                <div class="mcc-dsn-mini" id="dsn-mini-container">
+                                    <div class="panel-loading">
+                                        <div class="p-spinner"></div>
+                                        <span>ACQUIRING SIGNAL...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Space Weather Quick -->
+                        <section class="panel">
+                            <div class="panel-header">
+                                <div class="panel-label">
+                                    <span class="panel-indicator"></span>
+                                    SPACE WEATHER
+                                </div>
+                                <button class="p-btn p-btn-sm" onclick="MCC.switchTab('weather')">DETAILS</button>
+                            </div>
+                            <div class="panel-body">
+                                <div style="display: flex; flex-direction: column; gap: 8px;" id="wx-mini-container">
+                                    <div style="background:var(--bg-2); padding:10px; border:1px solid var(--border);">
+                                        <div style="font-size:9px; color:var(--text-3); font-weight:700; letter-spacing:1.5px;">SOLAR WIND SPEED</div>
+                                        <div style="font-size:18px; font-weight:700; color:var(--green);" id="wx-mini-wind">— KM/S</div>
+                                    </div>
+                                    <div style="background:var(--bg-2); padding:10px; border:1px solid var(--border);">
+                                        <div style="font-size:9px; color:var(--text-3); font-weight:700; letter-spacing:1.5px;">KP INDEX</div>
+                                        <div style="font-size:18px; font-weight:700; color:var(--amber);" id="wx-mini-kp">— QUIET</div>
+                                    </div>
+                                    <div style="background:var(--bg-2); padding:10px; border:1px solid var(--border);">
+                                        <div style="font-size:9px; color:var(--text-3); font-weight:700; letter-spacing:1.5px;">GEOMAGNETIC STORM</div>
+                                        <div style="font-size:14px; font-weight:700; color:var(--green);" id="wx-mini-storm">NONE</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB: LAUNCHES ════════ -->
+            <div class="mcc-panel" id="panel-launches">
+                <div class="mcc-launch-grid" id="launch-grid-container">
+                    <div class="panel-loading">
+                        <div class="p-spinner"></div>
+                        <span>LOADING LAUNCH MANIFEST...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB: ORBITAL ASSETS ════════ -->
+            <div class="mcc-panel" id="panel-orbital">
+                <div class="mcc-orbit-layout">
+                    <!-- Donut Chart -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div class="panel-label">
+                                <span class="panel-indicator" style="background:var(--mcc-purple);box-shadow:0 0 4px var(--mcc-purple);"></span>
+                                CONSTELLATION DISTRIBUTION
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="mcc-donut-wrap">
+                                <canvas id="constellation-donut" width="280" height="280"></canvas>
+                                <div class="mcc-donut-center">
+                                    <span class="mcc-donut-total" id="donut-total">—</span>
+                                    <span class="mcc-donut-total-label">TOTAL</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Constellation List -->
+                    <section class="panel">
+                        <div class="panel-header">
+                            <div class="panel-label">
+                                <span class="panel-indicator"></span>
+                                OPERATOR BREAKDOWN
+                            </div>
+                        </div>
+                        <div class="panel-body" style="padding: 0;">
+                            <div class="mcc-constellation-list" id="constellation-list">
+                                <div class="panel-loading">
+                                    <div class="p-spinner"></div>
+                                    <span>ANALYZING KESSLER FIELD...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Orbit Type Summary -->
+                <div class="mcc-orbit-types">
+                    <div class="mcc-orbit-type-card">
+                        <div class="mcc-orbit-type-label">LEO</div>
+                        <div class="mcc-orbit-type-val" style="color: var(--mcc-purple);">~78%</div>
+                        <div class="mcc-orbit-type-range">160 — 2,000 KM</div>
+                    </div>
+                    <div class="mcc-orbit-type-card">
+                        <div class="mcc-orbit-type-label">MEO</div>
+                        <div class="mcc-orbit-type-val" style="color: var(--mcc-blue);">~12%</div>
+                        <div class="mcc-orbit-type-range">2,000 — 35,786 KM</div>
+                    </div>
+                    <div class="mcc-orbit-type-card">
+                        <div class="mcc-orbit-type-label">GEO / HEO</div>
+                        <div class="mcc-orbit-type-val" style="color: var(--amber);">~10%</div>
+                        <div class="mcc-orbit-type-range">35,786+ KM</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ════════ TAB: DEEP SPACE NETWORK ════════ -->
+            <div class="mcc-panel" id="panel-dsn">
+                <div class="mcc-dsn-layout" id="dsn-complex-container">
+                    <div class="panel-loading" style="grid-column:1/-1;">
+                        <div class="p-spinner"></div>
+                        <span>CONNECTING TO DEEP SPACE NETWORK...</span>
+                    </div>
+                </div>
+
+                <div class="mcc-nsn-banner" id="nsn-container">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- ════════ TAB: SPACE WEATHER ════════ -->
+            <div class="mcc-panel" id="panel-weather">
+                <div class="mcc-weather-grid" id="wx-cards-container">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="mcc-solar-layout">
+                    <div class="mcc-solar-panel">
+                        <div class="mcc-solar-header">NOAA SPACE WEATHER SCALES</div>
+                        <div class="mcc-solar-body">
+                            <div class="mcc-scale-list" id="noaa-scales">
+                                <div class="mcc-scale-item">
+                                    <span class="mcc-scale-label">Geomagnetic</span>
+                                    <div class="mcc-scale-bar-wrap">
+                                        <div class="mcc-scale-bar" id="scale-geo" style="width:10%;background:var(--green);"></div>
+                                    </div>
+                                    <span class="mcc-scale-level" id="scale-geo-level" style="color:var(--green);">G0</span>
+                                </div>
+                                <div class="mcc-scale-item">
+                                    <span class="mcc-scale-label">Solar Radiation</span>
+                                    <div class="mcc-scale-bar-wrap">
+                                        <div class="mcc-scale-bar" id="scale-rad" style="width:10%;background:var(--green);"></div>
+                                    </div>
+                                    <span class="mcc-scale-level" id="scale-rad-level" style="color:var(--green);">S0</span>
+                                </div>
+                                <div class="mcc-scale-item">
+                                    <span class="mcc-scale-label">Radio Blackout</span>
+                                    <div class="mcc-scale-bar-wrap">
+                                        <div class="mcc-scale-bar" id="scale-radio" style="width:10%;background:var(--green);"></div>
+                                    </div>
+                                    <span class="mcc-scale-level" id="scale-radio-level" style="color:var(--green);">R0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mcc-solar-panel">
+                        <div class="mcc-solar-header">SOLAR CYCLE OVERVIEW</div>
+                        <div class="mcc-solar-body">
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                                    <span style="font-size:10px; color:var(--text-2); font-weight:600;">SOLAR CYCLE</span>
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-0); font-family:var(--font-mono);">25</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                                    <span style="font-size:10px; color:var(--text-2); font-weight:600;">CYCLE PHASE</span>
+                                    <span style="font-size:11px; font-weight:700; color:var(--amber); font-family:var(--font-mono);">SOLAR MAXIMUM</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                                    <span style="font-size:10px; color:var(--text-2); font-weight:600;">SUNSPOT NUMBER</span>
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-0); font-family:var(--font-mono);" id="wx-sunspot">—</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border);">
+                                    <span style="font-size:10px; color:var(--text-2); font-weight:600;">10.7 CM FLUX</span>
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-0); font-family:var(--font-mono);" id="wx-flux">—</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 6px 0;">
+                                    <span style="font-size:10px; color:var(--text-2); font-weight:600;">X-RAY FLUX</span>
+                                    <span style="font-size:11px; font-weight:700; color:var(--text-0); font-family:var(--font-mono);" id="wx-xray">—</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div><!-- /mcc-content -->
+    </main>
+
+    <!-- ───── STATUS BAR ───── -->
+    <footer id="status-bar">
+        <div class="status-left">
+            <img src="/static/img/logo_dark.png" alt="GVBC" class="footer-logo">
+            <span>MISSION CONTROL CENTER — THE SPACE DEVS / CELESTRAK / NASA DSN / NOAA SWPC</span>
+        </div>
+        <div class="status-right">
+            <span class="status-indicator"></span>
+            <span id="last-updated">LAST SYNC: —</span>
+        </div>
+    </footer>
+
+    <script src="/static/js/intel.js"></script>
+    <script src="/static/js/space.js"></script>
+</body>
+</html>

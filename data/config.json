@@ -1,5 +1,9 @@
 {
   "enable_flights": true,
   "enable_ships": true,
-  "flight_provider": "mock"
+  "enable_space": true,
+  "llm_api_url": "http://127.0.0.1:1234",
+  "llm_api_key": "sk-lm-ueqiO419:zXk9soElDyZ7OgV4XRia",
+  "llm_model": "google/gemma-4-e4b",
+  "flight_provider": "flightradar24"
 }

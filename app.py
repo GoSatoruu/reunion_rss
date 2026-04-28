@@ -11,7 +11,15 @@ from datetime import datetime
 import feedparser
 import requests
 import yfinance as yf
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response
+
+# FlightRadar24 SDK
+try:
+    from FlightRadar24 import FlightRadar24API
+    _fr24_available = True
+except ImportError:
+    _fr24_available = False
+    print("[FLIGHTS] FlightRadar24API not installed — FR24 provider unavailable")
 
 app = Flask(__name__)
 
@@ -22,7 +30,11 @@ CONFIG_FILE = os.path.join(DATA_DIR, "config.json")
 # Default configuration settings
 DEFAULT_CONFIG = {
     "enable_flights": True,
-    "enable_ships": True
+    "enable_ships": True,
+    "enable_space": True,
+    "llm_api_url": "http://localhost:1234/v1",
+    "llm_api_key": "lm-studio",
+    "llm_model": "local-model"
 }
 
 # ---------------------------------------------------------------------------
@@ -90,6 +102,11 @@ def finance_page():
     return render_template("finance.html")
 
 
+@app.route("/social")
+def social_page():
+    return render_template("social.html")
+
+
 # ---------------------------------------------------------------------------
 # RSS Source CRUD API
 # ---------------------------------------------------------------------------
@@ -145,11 +162,236 @@ def update_config():
         config["enable_flights"] = bool(data["enable_flights"])
     if "enable_ships" in data:
         config["enable_ships"] = bool(data["enable_ships"])
+    if "enable_space" in data:
+        config["enable_space"] = bool(data["enable_space"])
     if "flight_provider" in data:
         config["flight_provider"] = str(data["flight_provider"])
+    if "llm_api_url" in data:
+        config["llm_api_url"] = str(data["llm_api_url"])
+    if "llm_api_key" in data:
+        config["llm_api_key"] = str(data["llm_api_key"])
+    if "llm_model" in data:
+        config["llm_model"] = str(data["llm_model"])
         
     _save_config(config)
     return jsonify(config)
+
+
+# ---------------------------------------------------------------------------
+# Social Listening & LLM Analysis
+# ---------------------------------------------------------------------------
+
+@app.route("/api/social/analyze", methods=["POST"])
+def social_analyze():
+    config = _load_config()
+    data = request.get_json(force=True) if request.data else {}
+    prompt_type = data.get("type", "summary")
+    
+    sources = _load_sources()
+    articles = []
+    for src in sources:
+        try:
+            feed = feedparser.parse(src["url"])
+            for entry in feed.entries[:3]:
+                # Truncate overly long summaries to save tokens
+                summary = str(getattr(entry, 'summary', ''))
+                if len(summary) > 600:
+                    summary = summary[:600] + "..."
+                articles.append(f"Title: {getattr(entry, 'title', '')}\nSummary: {summary}")
+        except Exception as e:
+            print(f"[SOCIAL] Error reading RSS: {e}")
+            pass
+            
+    # Limit total articles and chunk them
+    articles = articles[:15]
+    chunk_size = 5
+    article_chunks = [articles[i:i + chunk_size] for i in range(0, len(articles), chunk_size)]
+    
+    if prompt_type == "summary":
+        task = "Summarize the key geopolitical, financial, and technological events from the provided news context. YOU MUST RESPOND ENTIRELY IN VIETNAMESE."
+    elif prompt_type == "sentiment":
+        task = "Analyze the overall sentiment of the provided news context. Highlight positive, negative, and neutral trends. YOU MUST RESPOND ENTIRELY IN VIETNAMESE."
+    elif prompt_type == "entities":
+        task = "Extract the key entities (people, organizations, countries) mentioned in the context and their current status or actions. YOU MUST RESPOND ENTIRELY IN VIETNAMESE."
+    else:
+        task = "Analyze the following news context. YOU MUST RESPOND ENTIRELY IN VIETNAMESE."
+
+    base_url = config.get("llm_api_url", "http://localhost:1234/v1").rstrip('/')
+    if not base_url.endswith("/v1"):
+        base_url += "/v1"
+    url = base_url + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {config.get('llm_api_key', 'lm-studio')}",
+        "Content-Type": "application/json"
+    }
+
+    def generate():
+        import json
+        try:
+            for chunk in article_chunks:
+                if not chunk: continue
+                context = "\n\n".join(chunk)
+                full_prompt = f"Context (Latest News Part):\n{context}\n\nTask: {task}"
+                
+                payload = {
+                    "model": config.get("llm_model", "local-model"),
+                    "messages": [
+                        {"role": "system", "content": "You are a senior intelligence analyst. Provide concise, highly analytical, and objective reports based only on the context provided. Use markdown formatting. YOUR OUTPUT MUST BE IN VIETNAMESE."},
+                        {"role": "user", "content": full_prompt}
+                    ],
+                    "temperature": 0.3,
+                    "stream": True
+                }
+                
+                resp = requests.post(url, json=payload, headers=headers, stream=True, timeout=300)
+                if resp.status_code != 200:
+                    try:
+                        err_data = resp.json()
+                        err_msg = err_data.get("error", err_data)
+                        err_content = "\n\n**[LM Studio Error: " + str(err_msg) + "]**"
+                        yield "data: " + json.dumps({"content": err_content}) + "\n\n"
+                    except Exception:
+                        err_content = "\n\n**[HTTP " + str(resp.status_code) + "]**"
+                        yield "data: " + json.dumps({"content": err_content}) + "\n\n"
+                    break
+                    
+                for line in resp.iter_lines():
+                    if line:
+                        line_str = line.decode('utf-8')
+                        if line_str.startswith("data: "):
+                            data_str = line_str[6:]
+                            if data_str == "[DONE]":
+                                continue
+                            try:
+                                j = json.loads(data_str)
+                                content = j["choices"][0]["delta"].get("content", "")
+                                if content:
+                                    yield "data: " + json.dumps({"content": content}) + "\n\n"
+                            except Exception:
+                                pass
+                                
+                yield "data: " + json.dumps({"content": "\n\n---\n\n"}) + "\n\n"
+                
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            err_content = "\n\n**[Backend Error: " + str(e) + "]**"
+            yield "data: " + json.dumps({"content": err_content}) + "\n\n"
+
+    return Response(generate(), mimetype='text/event-stream')
+
+
+# ---------------------------------------------------------------------------
+# Social Listening Engine — Financial Signal Processing API
+# ---------------------------------------------------------------------------
+
+import social_engine
+
+@app.route("/api/social/dashboard")
+def social_dashboard():
+    """Return complete social listening dashboard metrics."""
+    try:
+        # Auto-generate mock data if store is empty (demo mode)
+        if not social_engine.get_records():
+            social_engine.generate_mock_records(80)
+
+        summary = social_engine.build_dashboard_summary()
+        return jsonify(summary)
+    except Exception as e:
+        print(f"[SOCIAL_ENGINE] Dashboard error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/social/scan", methods=["POST"])
+def social_scan():
+    """Scan RSS feeds and process through the extraction pipeline."""
+    try:
+        config = _load_config()
+        data = request.get_json(force=True) if request.data else {}
+        use_llm = data.get("use_llm", False)
+
+        sources = _load_sources()
+        articles = []
+        for src in sources:
+            try:
+                feed = feedparser.parse(src["url"])
+                for entry in feed.entries[:5]:
+                    summary = str(getattr(entry, 'summary', ''))
+                    if len(summary) > 600:
+                        summary = summary[:600] + "..."
+                    articles.append({
+                        "title": getattr(entry, 'title', ''),
+                        "summary": summary,
+                        "source": src["name"],
+                    })
+            except Exception as e:
+                print(f"[SOCIAL_SCAN] Error reading RSS: {e}")
+
+        articles = articles[:30]  # Limit
+
+        new_records = social_engine.process_rss_articles(
+            articles, config, use_llm=use_llm
+        )
+
+        return jsonify({
+            "status": "success",
+            "articles_processed": len(articles),
+            "records_created": len(new_records),
+            "records": [r.to_dict() for r in new_records[:20]],
+        })
+    except Exception as e:
+        print(f"[SOCIAL_SCAN] Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/social/mock", methods=["POST"])
+def social_generate_mock():
+    """Generate mock social listening data for demonstration."""
+    try:
+        data = request.get_json(force=True) if request.data else {}
+        count = min(int(data.get("count", 80)), 200)
+        records = social_engine.generate_mock_records(count)
+        return jsonify({
+            "status": "success",
+            "records_generated": len(records),
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/social/hot-assets")
+def social_hot_assets():
+    """Return hot assets ranked by mention volume."""
+    records = social_engine.get_records()
+    from datetime import timedelta as _td
+    cutoff = datetime.utcnow() - _td(hours=1)
+    recent = [r for r in records if r.timestamp > cutoff]
+    return jsonify(social_engine.get_hot_assets(recent))
+
+
+@app.route("/api/social/fud-fomo-radar")
+def social_fud_fomo_radar():
+    """Return FOMO/FUD extreme index per asset."""
+    records = social_engine.get_records()
+    from datetime import timedelta as _td
+    cutoff = datetime.utcnow() - _td(hours=1)
+    recent = [r for r in records if r.timestamp > cutoff]
+    return jsonify(social_engine.get_fud_fomo_radar(recent))
+
+
+@app.route("/api/social/alerts")
+def social_alerts():
+    """Return recent market anomaly alerts."""
+    return jsonify(social_engine.get_alerts()[-20:])
+
+
+@app.route("/api/social/sentiment-trend")
+def social_sentiment_trend():
+    """Return ASI trend for a specific asset."""
+    asset = request.args.get("asset", "BTC")
+    interval = int(request.args.get("interval", 15))
+    records = social_engine.get_records()
+    trend = social_engine.get_sentiment_trend(records, asset, interval)
+    return jsonify(trend)
 
 
 # ---------------------------------------------------------------------------
@@ -201,6 +443,93 @@ _opensky_cache = {
     "timestamp": 0,
 }
 OPENSKY_CACHE_TTL = 30  # seconds — OpenSky free tier allows ~10 req/min
+FR24_CACHE_TTL = 15  # seconds — FR24 has better coverage, cache briefly
+
+
+# ── FR24 ICAO24-to-country lookup (top registrations) ─────────────
+_FR24_COUNTRY_PREFIXES = {
+    "a": "United States", "4b": "Switzerland", "3c": "Germany",
+    "40": "United Kingdom", "48": "Austria", "44": "Belgium",
+    "38": "France", "33": "Italy", "34": "Spain", "47": "Norway",
+    "46": "Denmark", "4c": "Ireland", "49": "Finland", "4d": "Netherlands",
+    "50": "Czech Republic", "89": "South Korea", "88": "Thailand",
+    "8a": "Japan", "76": "Brazil", "e0": "Mexico", "c0": "Canada",
+    "7c": "Australia", "71": "South Africa", "78": "China",
+    "75": "India", "70": "Pakistan", "06": "Morocco",
+    "0c": "Egypt", "60": "Ethiopia", "74": "Vietnam",
+    "50": "Israel", "4a": "Sweden", "01": "Nigeria",
+    "80": "Indonesia", "73": "Argentina", "e4": "Colombia",
+    "ab": "UAE", "aa": "Saudi Arabia", "a9": "Qatar",
+    "a8": "Kuwait", "a0": "Turkey", "15": "Russia",
+    "86": "Taiwan", "76": "Singapore", "84": "Malaysia",
+    "85": "Philippines",
+}
+
+
+def _guess_country_from_icao(icao24):
+    """Rough country guess from ICAO24 hex prefix."""
+    if not icao24:
+        return "Unknown"
+    icao_lower = icao24.lower()
+    # Try 2-char prefix first, then 1-char
+    prefix2 = icao_lower[:2]
+    prefix1 = icao_lower[:1]
+    return _FR24_COUNTRY_PREFIXES.get(prefix2, _FR24_COUNTRY_PREFIXES.get(prefix1, "Unknown"))
+
+
+def _get_fr24_data():
+    """Fetch live flight data from FlightRadar24 via the unofficial SDK."""
+    if not _fr24_available:
+        print("[FLIGHTS] FlightRadar24API not available, falling back to mock")
+        return _generate_mock_flights()
+
+    try:
+        fr_api = FlightRadar24API()
+        raw_flights = fr_api.get_flights()
+
+        flights = []
+        for f in raw_flights:
+            lat = f.latitude
+            lon = f.longitude
+            if lat is None or lon is None:
+                continue
+            if lat == 0 and lon == 0:
+                continue
+
+            alt_m = (f.altitude or 0) * 0.3048  # FR24 returns feet → convert to meters
+            speed_ms = (f.ground_speed or 0) * 0.514444  # knots → m/s
+            on_ground = f.on_ground if hasattr(f, "on_ground") else (alt_m < 100)
+
+            # Try to get origin country from ICAO24 hex address
+            country = _guess_country_from_icao(f.icao_24bit)
+
+            flights.append({
+                "icao24": f.icao_24bit or "",
+                "callsign": (f.callsign or "").strip(),
+                "country": country,
+                "lon": lon,
+                "lat": lat,
+                "alt": alt_m,
+                "velocity": speed_ms,
+                "heading": f.heading or 0,
+                "on_ground": on_ground,
+                "airline_icao": getattr(f, "airline_icao", "") or "",
+                "aircraft_code": getattr(f, "aircraft_code", "") or "",
+                "registration": getattr(f, "registration", "") or "",
+                "origin": getattr(f, "origin_airport_iata", "") or "",
+                "destination": getattr(f, "destination_airport_iata", "") or "",
+            })
+
+        data = {"time": int(_time.time()), "provider": "flightradar24"}
+        print(f"[FLIGHTS] FlightRadar24 fetched: {len(flights)} aircraft")
+        return data, flights
+
+    except Exception as e:
+        print(f"[FLIGHTS] FlightRadar24 error: {e}")
+        # Return stale cache or mock
+        if _opensky_cache["data"] is not None:
+            return _opensky_cache["data"], _opensky_cache["flights"]
+        return _generate_mock_flights()
 
 
 def _generate_mock_flights():
@@ -250,7 +579,7 @@ def _generate_mock_flights():
 
 
 def _get_opensky_data(force_refresh=False):
-    """Fetch OpenSky data with caching. Returns parsed flights list."""
+    """Fetch flight data from selected provider with caching."""
     now = _time.time()
 
     # Check config for provider
@@ -270,9 +599,22 @@ def _get_opensky_data(force_refresh=False):
         _opensky_cache["provider"] = "mock"
         return data, flights
 
+    # ── FlightRadar24 provider ────────────────────────
+    if provider == "flightradar24":
+        if not force_refresh and _opensky_cache["data"] is not None and _opensky_cache.get("provider") == "flightradar24":
+            if now - _opensky_cache["timestamp"] < FR24_CACHE_TTL:
+                return _opensky_cache["data"], _opensky_cache["flights"]
 
+        data, flights = _get_fr24_data()
+        _opensky_cache["data"] = data
+        _opensky_cache["flights"] = flights
+        _opensky_cache["timestamp"] = now
+        _opensky_cache["provider"] = "flightradar24"
+        return data, flights
+
+    # ── OpenSky provider (default) ────────────────────
     # Return cache if fresh
-    if not force_refresh and _opensky_cache["data"] is not None and _opensky_cache.get("provider") != "mock":
+    if not force_refresh and _opensky_cache["data"] is not None and _opensky_cache.get("provider") == "opensky":
         if now - _opensky_cache["timestamp"] < OPENSKY_CACHE_TTL:
             return _opensky_cache["data"], _opensky_cache["flights"]
 
@@ -323,12 +665,19 @@ def airline_page():
 
 @app.route("/api/flights")
 def get_flights():
-    """Proxy to OpenSky Network with caching."""
+    """Flight data proxy — serves from selected provider (OpenSky / FlightRadar24 / Mock)."""
     try:
         data, flights = _get_opensky_data()
-        return jsonify({"time": data.get("time"), "flights": flights})
+        config = _load_config()
+        provider = config.get("flight_provider", "opensky")
+        return jsonify({
+            "time": data.get("time"),
+            "flights": flights,
+            "provider": provider,
+            "count": len(flights),
+        })
     except Exception as e:
-        return jsonify({"error": str(e), "flights": []}), 502
+        return jsonify({"error": str(e), "flights": [], "provider": "error"}), 502
 
 
 # Analytics removed - handled on client via Intel.js
@@ -897,6 +1246,281 @@ def get_finance_factors():
     except Exception as e:
         print("[Factors] Error: ", e)
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Space Intelligence (Launches & Orbit Stats)
+# ---------------------------------------------------------------------------
+
+LAUNCH_LIBRARY_URL = "https://lldev.thespacedevs.com/2.2.0/launch/upcoming/"
+CELESTRAK_ACTIVE_URL = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json"
+
+_space_cache = {
+    "launches": None,
+    "launches_timestamp": 0,
+    "orbits": None,
+    "orbits_timestamp": 0,
+}
+SPACE_CACHE_TTL = 3600 # 1 hour
+
+@app.route("/space")
+def space_page():
+    return render_template("space.html")
+
+@app.route("/api/space/launches")
+def get_space_launches():
+    now = _time.time()
+    if not _space_cache["launches"] or (now - _space_cache["launches_timestamp"]) > SPACE_CACHE_TTL:
+        try:
+            resp = requests.get(LAUNCH_LIBRARY_URL, timeout=15)
+            if resp.status_code == 200:
+                data = resp.json()
+                _space_cache["launches"] = data.get("results", [])
+                _space_cache["launches_timestamp"] = now
+            else:
+                return jsonify({"results": _space_cache["launches"] or []})
+        except Exception as e:
+            print(f"[SPACE] Error fetching launches: {e}")
+            return jsonify({"results": _space_cache["launches"] or []})
+    
+    return jsonify({"results": _space_cache["launches"]})
+
+@app.route("/api/space/orbits")
+def get_orbit_stats():
+    now = _time.time()
+    if not _space_cache["orbits"] or (now - _space_cache["orbits_timestamp"]) > SPACE_CACHE_TTL:
+        try:
+            resp = requests.get(CELESTRAK_ACTIVE_URL, timeout=20)
+            if resp.status_code == 200:
+                data = resp.json()
+                stats = {
+                    "total": len(data),
+                    "operators": Counter(),
+                    "recent": []
+                }
+                for sat in data:
+                    name = sat.get("OBJECT_NAME", "UNKNOWN")
+                    if "STARLINK" in name: stats["operators"]["SpaceX (Starlink)"] += 1
+                    elif "ONEWEB" in name: stats["operators"]["OneWeb"] += 1
+                    elif "GPS" in name: stats["operators"]["US (GPS)"] += 1
+                    elif "GLONASS" in name: stats["operators"]["Russia (GLONASS)"] += 1
+                    elif "BEIDOU" in name: stats["operators"]["China (Beidou)"] += 1
+                    elif "GALILEO" in name: stats["operators"]["EU (Galileo)"] += 1
+                    elif "IRIDIUM" in name: stats["operators"]["Iridium"] += 1
+                    else: stats["operators"]["Other"] += 1
+                stats["operators"] = [{"name": k, "count": v} for k, v in stats["operators"].most_common(10)]
+                _space_cache["orbits"] = stats
+                _space_cache["orbits_timestamp"] = now
+            else:
+                return jsonify(_space_cache["orbits"] or {"error": "Source unavailable"})
+        except Exception as e:
+            print(f"[SPACE] Error fetching orbit stats: {e}")
+            return jsonify(_space_cache["orbits"] or {"error": str(e)})
+            
+    return jsonify(_space_cache["orbits"])
+
+
+@app.route("/api/space/network")
+def get_space_network():
+    import random
+    import requests
+    import xml.etree.ElementTree as ET
+
+    dsn_data = []
+    
+    try:
+        # Fetch true live data from NASA DSN
+        req = requests.get("https://eyes.nasa.gov/dsn/data/dsn.xml", timeout=5)
+        if req.status_code == 200:
+            root = ET.fromstring(req.content)
+            stations = root.findall('dish')
+            
+            # Extract top 3 active connections
+            for dish in stations:
+                if len(dsn_data) >= 3: break
+                
+                name = dish.get('name', 'Unknown')
+                targets = dish.findall('target')
+                
+                if targets:
+                    target_name = targets[0].get('name', '').upper()
+                    signals = dish.findall('downSignal') + dish.findall('upSignal')
+                    
+                    if signals and target_name:
+                        band = signals[0].get('dataRate', '10.0') # using dataRate as placeholder if band unavailable
+                        power = signals[0].get('power', f'-{random.randint(110, 160)}')
+                        
+                        fac_name = "Goldstone (USA)" if name.startswith(('1', '2', '3')) else "Canberra (AUS)" if name.startswith(('4', '5')) else "Madrid (ESP)"
+                        
+                        dsn_data.append({
+                            "facility": f"{fac_name} [DSS-{name}]",
+                            "activity": "TRACKING LIVE",
+                            "signal_strength": f"{power} dBm",
+                            "band": "S/X/Ka Band",
+                            "target": target_name
+                        })
+    except Exception as e:
+        print("[DSN] Error fetching true DSN data:", e)
+
+    # Fallback to simulated if offline or empty
+    if not dsn_data:
+        dsn_complexes = ["Goldstone (USA)", "Madrid (ESP)", "Canberra (AUS)"]
+        bands = ["X-Band", "Ka-Band", "S-Band"]
+        statuses = ["RECEIVING", "TRANSMITTING", "TRACKING"]
+        
+        for c in dsn_complexes:
+            activity = random.choice(statuses)
+            dsn_data.append({
+                "facility": c,
+                "activity": activity,
+                "signal_strength": f"-{random.randint(110, 160)} dBm",
+                "band": random.choice(bands),
+                "target": random.choice(["VOYAGER 1", "VOYAGER 2", "JWST", "MRO", "PERSEVERANCE", "JUNO"])
+            })
+        
+    nsn_data = [
+        {"facility": "Near Space Network", "status": "NOMINAL", "active_links": random.randint(10, 30)},
+        {"facility": "TDRS Constellation", "status": "NOMINAL", "active_links": random.randint(5, 12)}
+    ]
+    
+    return jsonify({
+        "dsn": dsn_data,
+        "nsn": nsn_data
+    })
+
+
+# ---------------------------------------------------------------------------
+# ISS Real-Time Tracking
+# ---------------------------------------------------------------------------
+
+_iss_cache = {"data": None, "timestamp": 0}
+ISS_CACHE_TTL = 15  # 15 seconds
+
+@app.route("/api/space/iss")
+def get_iss_position():
+    """Real-time ISS position via open-notify / wttr-style API."""
+    now = _time.time()
+    if _iss_cache["data"] and (now - _iss_cache["timestamp"]) < ISS_CACHE_TTL:
+        return jsonify(_iss_cache["data"])
+
+    try:
+        resp = requests.get("http://api.open-notify.org/iss-now.json", timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            pos = data.get("iss_position", {})
+            result = {
+                "latitude": float(pos.get("latitude", 0)),
+                "longitude": float(pos.get("longitude", 0)),
+                "altitude": 420,  # Average ISS altitude in km
+                "velocity": 7.66,  # km/s
+                "crew_count": 7,  # Updated manually, typical crew size
+                "timestamp": data.get("timestamp", int(now)),
+            }
+            _iss_cache["data"] = result
+            _iss_cache["timestamp"] = now
+            return jsonify(result)
+    except Exception as e:
+        print(f"[ISS] Error fetching position: {e}")
+
+    # Fallback: procedural ISS position (it orbits ~every 92 mins)
+    import random
+    orbit_period = 92 * 60  # seconds
+    phase = (now % orbit_period) / orbit_period * 2 * math.pi
+    lat = 51.6 * math.sin(phase)  # ISS inclination ~51.6°
+    lon = (((now / orbit_period) * 360) % 360) - 180
+
+    result = {
+        "latitude": round(lat, 4),
+        "longitude": round(lon, 4),
+        "altitude": 420 + random.randint(-5, 5),
+        "velocity": 7.66,
+        "crew_count": 7,
+        "timestamp": int(now),
+    }
+    _iss_cache["data"] = result
+    _iss_cache["timestamp"] = now
+    return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# Space Weather (NOAA SWPC / Procedural Fallback)
+# ---------------------------------------------------------------------------
+
+_weather_cache = {"data": None, "timestamp": 0}
+WEATHER_CACHE_TTL = 600  # 10 minutes
+
+@app.route("/api/space/weather")
+def get_space_weather():
+    """Space weather data from NOAA SWPC with procedural fallback."""
+    now = _time.time()
+    if _weather_cache["data"] and (now - _weather_cache["timestamp"]) < WEATHER_CACHE_TTL:
+        return jsonify(_weather_cache["data"])
+
+    result = {}
+
+    # Try NOAA SWPC planetary K-index
+    try:
+        kp_resp = requests.get(
+            "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json",
+            timeout=8
+        )
+        if kp_resp.status_code == 200:
+            kp_data = kp_resp.json()
+            if len(kp_data) > 1:
+                latest = kp_data[-1]
+                result["kp_index"] = float(latest[1]) if latest[1] else 0
+    except Exception as e:
+        print(f"[WEATHER] KP index error: {e}")
+
+    # Try NOAA SWPC solar wind plasma
+    try:
+        plasma_resp = requests.get(
+            "https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json",
+            timeout=8
+        )
+        if plasma_resp.status_code == 200:
+            plasma_data = plasma_resp.json()
+            if len(plasma_data) > 1:
+                latest = plasma_data[-1]
+                if latest[1]:
+                    result["proton_density"] = round(float(latest[1]), 1)
+                if latest[2]:
+                    result["solar_wind_speed"] = round(float(latest[2]))
+    except Exception as e:
+        print(f"[WEATHER] Plasma error: {e}")
+
+    # Try NOAA SWPC magnetic field (Bz)
+    try:
+        mag_resp = requests.get(
+            "https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json",
+            timeout=8
+        )
+        if mag_resp.status_code == 200:
+            mag_data = mag_resp.json()
+            if len(mag_data) > 1:
+                latest = mag_data[-1]
+                if latest[3]:
+                    result["bz_component"] = round(float(latest[3]), 1)
+    except Exception as e:
+        print(f"[WEATHER] Mag field error: {e}")
+
+    # Fill in any missing values with procedural data
+    import random
+    random.seed(int(now / 600))  # Change every 10 minutes
+    result.setdefault("kp_index", round(random.uniform(1.0, 4.0), 1))
+    result.setdefault("solar_wind_speed", random.randint(300, 550))
+    result.setdefault("proton_density", round(random.uniform(2.0, 15.0), 1))
+    result.setdefault("bz_component", round(random.uniform(-8.0, 5.0), 1))
+    result.setdefault("solar_radiation_level", 0)
+    result.setdefault("radio_blackout_level", 0)
+    result.setdefault("sunspot_number", random.randint(140, 220))
+    result.setdefault("solar_flux", f"{random.randint(140, 200)} SFU")
+    result.setdefault("xray_flux", random.choice(["A-CLASS", "B-CLASS", "C-CLASS"]))
+
+    _weather_cache["data"] = result
+    _weather_cache["timestamp"] = now
+
+    return jsonify(result)
 
 
 # ---------------------------------------------------------------------------

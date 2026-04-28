@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Financial Social Listening — Real-time FOMO/FUD Detection & Asset Sentiment Intelligence">
+    <title>GVBC Reunion — Social Listening</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        /* ═══════════════════════════════════════════════════════
+           SOCIAL LISTENING — Financial Intelligence Dashboard
+           ═══════════════════════════════════════════════════════ */
+
+        .social-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr 340px;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+            height: calc(100vh - 120px);
+            padding: 16px;
+        }
+
+        /* ── Top Metrics Strip ────────────────────────────── */
+        .metrics-strip {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .metric-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+        .metric-card:hover {
+            border-color: var(--border-bright);
+            background: var(--bg-2);
+        }
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+        }
+        .metric-card.mc-bullish::before { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .metric-card.mc-bearish::before { background: var(--red); box-shadow: 0 0 8px var(--red); }
+        .metric-card.mc-neutral::before { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+        .metric-card.mc-alert::before { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink-dot 1.5s ease-in-out infinite; }
+
+        .mc-label {
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-3);
+            text-transform: uppercase;
+        }
+        .mc-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 1px;
+            line-height: 1.1;
+        }
+        .mc-sub {
+            font-size: 10px;
+            color: var(--text-2);
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Left Column: Controls + Sources ──────────────── */
+        .social-left {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .ai-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ai-btn {
+            width: 100%;
+            text-align: left;
+            padding: 10px 14px;
+            font-size: 11px;
+            justify-content: flex-start;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        .ai-btn i {
+            font-style: normal;
+            font-size: 14px;
+        }
+        .ai-btn .btn-label {
+            flex: 1;
+        }
+        .ai-btn .btn-badge {
+            font-size: 8px;
+            padding: 2px 6px;
+            background: var(--cyan-dim);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            color: var(--cyan);
+            letter-spacing: 1px;
+        }
+
+        .scan-controls {
+            display: flex;
+            gap: 6px;
+        }
+        .scan-controls .p-btn {
+            flex: 1;
+            justify-content: center;
+            padding: 8px;
+        }
+
+        /* ── Hot Assets Table ──────────────────────────────── */
+        .hot-asset-row {
+            display: grid;
+            grid-template-columns: 24px 1fr 60px 50px 80px;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+            font-size: 11px;
+            transition: var(--transition);
+            cursor: default;
+        }
+        .hot-asset-row:hover {
+            background: var(--bg-row-hover);
+        }
+        .hot-asset-row:last-child { border-bottom: none; }
+
+        .ha-rank {
+            font-size: 9px;
+            color: var(--text-3);
+            font-weight: 600;
+            text-align: right;
+        }
+        .ha-symbol {
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 1px;
+        }
+        .ha-volume {
+            text-align: right;
+            font-size: 10px;
+            color: var(--cyan);
+            font-weight: 600;
+        }
+        .ha-fomo {
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 4px;
+        }
+        .ha-bar-cell {
+            height: 4px;
+            background: var(--bg-3);
+            overflow: hidden;
+            position: relative;
+        }
+        .ha-bar {
+            height: 100%;
+            transition: width 0.6s ease;
+        }
+        .ha-bar.bar-bull { background: linear-gradient(90deg, var(--green), #4ade80); }
+        .ha-bar.bar-bear { background: linear-gradient(90deg, var(--red), #f87171); }
+        .ha-bar.bar-neutral { background: linear-gradient(90deg, var(--amber), #fbbf24); }
+
+        /* ── Center: Chat + Sentiment Chart ────────────────── */
+        .social-center {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow: hidden;
+        }
+
+        .sentiment-chart-wrap {
+            width: 100%;
+            padding: 12px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            position: relative;
+        }
+        .sentiment-chart-wrap canvas {
+            width: 100%;
+            height: 100px;
+            display: block;
+        }
+        .chart-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+        .chart-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+        }
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 1px;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-0);
+            border: 1px solid var(--border);
+            padding: 16px;
+            font-family: var(--font-mono);
+            color: var(--text-0);
+            line-height: 1.6;
+        }
+        .chat-message {
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .chat-message:last-child { border-bottom: none; }
+        .chat-role {
+            font-size: 10px;
+            font-family: var(--font-mono);
+            color: var(--text-muted, var(--text-3));
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+        }
+        .chat-role.user { color: var(--cyan); }
+        .chat-role.ai { color: var(--green); }
+        .chat-content { font-size: 13px; }
+        .chat-content p { margin: 0 0 8px 0; }
+        .chat-content ul { margin: 0 0 8px 20px; }
+        .chat-content h1, .chat-content h2, .chat-content h3 {
+            color: var(--text-1);
+            margin-top: 12px;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        /* ── Right Column: Radar + Alerts ─────────────────── */
+        .social-right {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        /* FOMO/FUD Radar */
+        .radar-row {
+            display: grid;
+            grid-template-columns: 1fr 100px 70px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+            font-size: 11px;
+            transition: var(--transition);
+        }
+        .radar-row:hover { background: var(--bg-row-hover); }
+        .radar-row:last-child { border-bottom: none; }
+
+        .radar-asset {
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 1px;
+        }
+        .radar-gauge {
+            position: relative;
+            height: 6px;
+            background: var(--bg-3);
+            overflow: visible;
+        }
+        .radar-gauge-fill {
+            position: absolute;
+            height: 100%;
+            top: 0;
+            transition: all 0.5s ease;
+        }
+        .radar-gauge-fill.gauge-fomo {
+            background: linear-gradient(90deg, var(--amber), #ef4444);
+            left: 50%;
+        }
+        .radar-gauge-fill.gauge-fud {
+            background: linear-gradient(270deg, var(--cyan), #3b82f6);
+            right: 50%;
+        }
+        .radar-gauge-center {
+            position: absolute;
+            top: -2px;
+            left: calc(50% - 1px);
+            width: 2px;
+            height: 10px;
+            background: var(--text-3);
+        }
+        .radar-signal {
+            text-align: center;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+        }
+        .signal-fomo {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .signal-fud {
+            color: var(--cyan);
+            background: var(--cyan-dim);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+        .signal-stable {
+            color: var(--green);
+            background: var(--green-dim);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* Alert Cards */
+        .alert-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            transition: var(--transition);
+        }
+        .alert-card:hover { background: var(--bg-row-hover); }
+        .alert-card:last-child { border-bottom: none; }
+
+        .alert-icon {
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .alert-body {
+            flex: 1;
+        }
+        .alert-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 0.5px;
+        }
+        .alert-detail {
+            font-size: 10px;
+            color: var(--text-3);
+            margin-top: 2px;
+        }
+        .alert-time {
+            font-size: 9px;
+            color: var(--text-3);
+            white-space: nowrap;
+        }
+
+        /* Source Distribution */
+        .source-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 8px;
+            font-size: 11px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.3);
+        }
+        .source-row:last-child { border-bottom: none; }
+        .source-name {
+            color: var(--text-1);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .source-count {
+            color: var(--cyan);
+            font-weight: 600;
+        }
+
+        /* Market Mood Donut placeholder */
+        .mood-visual {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px;
+        }
+        .mood-donut {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .mood-donut canvas {
+            width: 80px;
+            height: 80px;
+        }
+        .mood-labels {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mood-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: var(--text-2);
+            letter-spacing: 0.5px;
+        }
+        .mood-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 1px;
+        }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 1400px) {
+            .social-layout {
+                grid-template-columns: 280px 1fr;
+            }
+            .social-right {
+                grid-column: 1 / -1;
+                flex-direction: row;
+                overflow-x: auto;
+            }
+            .social-right > * { flex: 1; min-width: 300px; }
+        }
+        @media (max-width: 1024px) {
+            .social-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .social-right { flex-direction: column; }
+        }
+
+        /* ── Animations ───────────────────────────────────── */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .pulse-text {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .loading-shimmer {
+            background: linear-gradient(90deg, var(--bg-2) 25%, var(--bg-3) 50%, var(--bg-2) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/finance" class="nav-link" id="nav-finance">FINANCE INTEL</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/space" class="nav-link" id="nav-space">SPACE INTEL</a>
+            <a href="/social" class="nav-link active" id="nav-social">SOCIAL LISTENING</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
+        </div>
+    </nav>
+
+    <main class="social-layout">
+        <!-- ═══ TOP METRICS STRIP ═══ -->
+        <div class="metrics-strip" id="metrics-strip">
+            <div class="metric-card mc-neutral" id="mc-records">
+                <span class="mc-label">DATA POINTS (1H)</span>
+                <span class="mc-value" id="mc-records-val">—</span>
+                <span class="mc-sub">Records processed</span>
+            </div>
+            <div class="metric-card mc-neutral" id="mc-asi">
+                <span class="mc-label">OVERALL ASI</span>
+                <span class="mc-value" id="mc-asi-val">—</span>
+                <span class="mc-sub">Asset Sentiment Index</span>
+            </div>
+            <div class="metric-card mc-neutral" id="mc-bull">
+                <span class="mc-label">BULLISH</span>
+                <span class="mc-value" id="mc-bull-val">—</span>
+                <span class="mc-sub" id="mc-bull-sub">Positive signals</span>
+            </div>
+            <div class="metric-card mc-neutral" id="mc-bear">
+                <span class="mc-label">BEARISH</span>
+                <span class="mc-value" id="mc-bear-val">—</span>
+                <span class="mc-sub" id="mc-bear-sub">Negative signals</span>
+            </div>
+            <div class="metric-card mc-alert" id="mc-alerts">
+                <span class="mc-label">FLASH ALERTS</span>
+                <span class="mc-value" id="mc-alerts-val">0</span>
+                <span class="mc-sub">Pump/Dump signals</span>
+            </div>
+        </div>
+
+        <!-- ═══ LEFT COLUMN: Controls + Hot Assets ═══ -->
+        <div class="social-left">
+            <!-- Scan & Generate Controls -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        SIGNAL OPERATIONS
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="ai-controls">
+                        <div class="scan-controls">
+                            <button class="p-btn p-btn-primary" id="btn-scan-rss" title="Scan RSS feeds with rule-based extractor">
+                                ⚡ SCAN RSS
+                            </button>
+                            <button class="p-btn" id="btn-generate-mock" title="Generate mock social data for demo">
+                                🎲 MOCK DATA
+                            </button>
+                        </div>
+                        <button class="p-btn ai-btn" data-type="summary" id="btn-summary">
+                            <i>📝</i>
+                            <span class="btn-label">EXECUTIVE SUMMARY</span>
+                            <span class="btn-badge">LLM</span>
+                        </button>
+                        <button class="p-btn ai-btn" data-type="sentiment" id="btn-sentiment">
+                            <i>📊</i>
+                            <span class="btn-label">SENTIMENT REPORT</span>
+                            <span class="btn-badge">LLM</span>
+                        </button>
+                        <button class="p-btn ai-btn" data-type="entities" id="btn-entities">
+                            <i>🎯</i>
+                            <span class="btn-label">ENTITY EXTRACTION</span>
+                            <span class="btn-badge">LLM</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="panel-footer-bar" id="scan-status">
+                    Ready — Click SCAN RSS or MOCK DATA to begin
+                </div>
+            </section>
+
+            <!-- Hot Assets -->
+            <section class="panel" style="flex: 1; min-height: 200px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        HOT ASSETS
+                    </div>
+                    <span class="panel-badge" id="hot-asset-count">0</span>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <div id="hot-assets-list"></div>
+                </div>
+                <div class="panel-footer-bar">
+                    Ranked by mention volume (1h window)
+                </div>
+            </section>
+
+            <!-- Market Mood -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        MARKET MOOD
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="mood-visual">
+                        <div class="mood-donut">
+                            <canvas id="mood-donut-canvas" width="80" height="80"></canvas>
+                        </div>
+                        <div class="mood-labels">
+                            <div class="mood-label">
+                                <span class="mood-dot" style="background: var(--green);"></span>
+                                <span id="mood-bull-pct">0%</span> BULLISH
+                            </div>
+                            <div class="mood-label">
+                                <span class="mood-dot" style="background: var(--red);"></span>
+                                <span id="mood-bear-pct">0%</span> BEARISH
+                            </div>
+                            <div class="mood-label">
+                                <span class="mood-dot" style="background: var(--amber);"></span>
+                                <span id="mood-neutral-pct">0%</span> NEUTRAL
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══ CENTER: Sentiment Chart + AI Chat ═══ -->
+        <div class="social-center">
+            <!-- Sentiment Timeline -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        ASI SENTIMENT TIMELINE
+                    </div>
+                    <span class="panel-badge" id="ai-status">STANDBY</span>
+                </div>
+                <div class="panel-body" style="padding: 10px;">
+                    <div class="sentiment-chart-wrap">
+                        <canvas id="sentiment-chart" width="800" height="100"></canvas>
+                        <div class="chart-legend">
+                            <div class="chart-legend-item">
+                                <span class="legend-dot" style="background: var(--cyan);"></span>
+                                ASI INDEX
+                            </div>
+                            <div class="chart-legend-item">
+                                <span class="legend-dot" style="background: var(--amber);"></span>
+                                VOLUME
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- AI Chat Terminal -->
+            <section class="panel" style="flex: 1; min-height: 300px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        INTELLIGENCE TERMINAL
+                    </div>
+                </div>
+                <div class="panel-body" style="height: calc(100% - 35px); padding: 0;">
+                    <div class="chat-container">
+                        <div class="chat-history" id="chat-history">
+                            <div class="chat-message">
+                                <div class="chat-role ai">SYSTEM</div>
+                                <div class="chat-content">
+                                    <p>🔍 <strong>Financial Social Listening Engine v2.0</strong> — Online.</p>
+                                    <p>Features: ASI Calculator • FOMO/FUD Radar • Flash Alert Trigger • Multi-Source Ingestion</p>
+                                    <p>Click <strong>SCAN RSS</strong> to analyze live feeds or <strong>MOCK DATA</strong> for demo. Use LLM buttons for deep narrative analysis.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══ RIGHT COLUMN: Radar + Alerts + Sources ═══ -->
+        <div class="social-right">
+            <!-- FOMO/FUD Radar -->
+            <section class="panel" style="flex: 1; min-height: 200px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator indicator-live"></span>
+                        FOMO / FUD RADAR
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <div id="radar-list"></div>
+                </div>
+                <div class="panel-footer-bar">
+                    Extreme sentiment detection (|level| ≥ 3)
+                </div>
+            </section>
+
+            <!-- Flash Alerts -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background: var(--amber); box-shadow: 0 0 6px var(--amber);"></span>
+                        FLASH ALERTS
+                    </div>
+                    <span class="panel-badge" id="alert-count-badge">0</span>
+                </div>
+                <div class="panel-body" style="padding: 0; max-height: 200px; overflow-y: auto;">
+                    <div id="alerts-list">
+                        <div class="alert-card">
+                            <span class="alert-icon">🔇</span>
+                            <div class="alert-body">
+                                <div class="alert-title" style="color: var(--text-3);">No alerts detected</div>
+                                <div class="alert-detail">Waiting for signal data...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Data Sources -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        DATA SOURCES
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <div id="sources-list">
+                        <div class="source-row">
+                            <span class="source-name" style="color: var(--text-3);">Waiting for scan...</span>
+                            <span class="source-count">—</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Topic Distribution -->
+            <section class="panel">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        TOPIC DISTRIBUTION
+                    </div>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                    <div id="topics-list">
+                        <div class="source-row">
+                            <span class="source-name" style="color: var(--text-3);">Waiting for data...</span>
+                            <span class="source-count">—</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="/static/js/intel.js"></script>
+    <script src="/static/js/social.js"></script>
+</body>
+</html>

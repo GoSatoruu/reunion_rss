@@ -283,6 +283,7 @@
             <a href="/finance" class="nav-link" id="nav-finance">FINANCE INTEL</a>
             <a href="/airline" class="nav-link active" id="nav-airline">AIRLINE INTEL</a>
             <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/space" class="nav-link" id="nav-space">SPACE INTEL</a>
             <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
             <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
             <span class="nav-clock" id="nav-clock"></span>
@@ -335,6 +336,7 @@
                 <div class="panel-label">
                     <span class="panel-indicator indicator-live"></span>
                     GLOBAL AIR TRAFFIC — LIVE
+                    <span id="provider-badge" style="margin-left:12px;font-size:9px;"></span>
                 </div>
                 <div class="map-legend">
                     <span class="legend-high">CRUISE (10km+)</span>
@@ -406,6 +408,21 @@
                 </div>
                 <div class="panel-body" style="padding:0;" id="airline-callsigns-body">
                     <div class="panel-loading" id="callsigns-stat-loading">
+                        <div class="p-spinner"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Top Routes (FR24 only) -->
+            <section class="panel" id="airline-routes-panel" style="display:none;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        TOP ROUTES <span style="font-size:8px;color:var(--text-3);margin-left:6px;">FR24 ENRICHED</span>
+                    </div>
+                </div>
+                <div class="panel-body" style="padding:0;" id="airline-routes-body">
+                    <div class="panel-loading" id="routes-stat-loading">
                         <div class="p-spinner"></div>
                     </div>
                 </div>
