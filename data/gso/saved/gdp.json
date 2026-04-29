@@ -1,0 +1,117 @@
+{
+  "id": "gdp",
+  "fetched_at": "2026-04-28T18:50:28.030947",
+  "metadata": {
+    "name": "Gross Domestic Product (GDP)",
+    "category": "National Accounts",
+    "path": "Giao dien moi - EN/National accounts and state budget/National accounts/V01.01"
+  },
+  "data": {
+    "columns": [
+      {
+        "code": "Year",
+        "text": "Year"
+      },
+      {
+        "code": "Indicator",
+        "text": "Indicator"
+      },
+      {
+        "code": "Value",
+        "text": "Value"
+      }
+    ],
+    "data": [
+      {
+        "key": [
+          "2020",
+          "Total"
+        ],
+        "values": [
+          "163"
+        ]
+      },
+      {
+        "key": [
+          "2020",
+          "Index"
+        ],
+        "values": [
+          "141"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Total"
+        ],
+        "values": [
+          "119"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Index"
+        ],
+        "values": [
+          "200"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Total"
+        ],
+        "values": [
+          "155"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Index"
+        ],
+        "values": [
+          "112"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Total"
+        ],
+        "values": [
+          "118"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Index"
+        ],
+        "values": [
+          "154"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Total"
+        ],
+        "values": [
+          "104"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Index"
+        ],
+        "values": [
+          "147"
+        ]
+      }
+    ]
+  }
+}

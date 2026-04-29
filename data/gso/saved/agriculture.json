@@ -1,0 +1,117 @@
+{
+  "id": "agriculture",
+  "fetched_at": "2026-04-28T18:54:06.183194",
+  "metadata": {
+    "name": "Agriculture",
+    "category": "Agriculture",
+    "path": "Giao dien moi - EN/Agriculture Forestry and Fishery/Agriculture/V03.01"
+  },
+  "data": {
+    "columns": [
+      {
+        "code": "Year",
+        "text": "Year"
+      },
+      {
+        "code": "Indicator",
+        "text": "Indicator"
+      },
+      {
+        "code": "Value",
+        "text": "Value"
+      }
+    ],
+    "data": [
+      {
+        "key": [
+          "2020",
+          "Total"
+        ],
+        "values": [
+          "140"
+        ]
+      },
+      {
+        "key": [
+          "2020",
+          "Index"
+        ],
+        "values": [
+          "199"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Total"
+        ],
+        "values": [
+          "167"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Index"
+        ],
+        "values": [
+          "125"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Total"
+        ],
+        "values": [
+          "126"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Index"
+        ],
+        "values": [
+          "104"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Total"
+        ],
+        "values": [
+          "118"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Index"
+        ],
+        "values": [
+          "189"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Total"
+        ],
+        "values": [
+          "193"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Index"
+        ],
+        "values": [
+          "155"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "id": "population",
+  "fetched_at": "2026-04-28T18:51:30.361959",
+  "metadata": {
+    "name": "Population",
+    "category": "Population",
+    "path": "Giao dien moi - EN/Population and Employment/Population/V02.01"
+  },
+  "data": {
+    "columns": [
+      {
+        "code": "Year",
+        "text": "Year"
+      },
+      {
+        "code": "Indicator",
+        "text": "Indicator"
+      },
+      {
+        "code": "Value",
+        "text": "Value"
+      }
+    ],
+    "data": [
+      {
+        "key": [
+          "2020",
+          "Total"
+        ],
+        "values": [
+          "141"
+        ]
+      },
+      {
+        "key": [
+          "2020",
+          "Index"
+        ],
+        "values": [
+          "195"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Total"
+        ],
+        "values": [
+          "151"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Index"
+        ],
+        "values": [
+          "181"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Total"
+        ],
+        "values": [
+          "174"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Index"
+        ],
+        "values": [
+          "193"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Total"
+        ],
+        "values": [
+          "176"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Index"
+        ],
+        "values": [
+          "190"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Total"
+        ],
+        "values": [
+          "133"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Index"
+        ],
+        "values": [
+          "164"
+        ]
+      }
+    ]
+  }
+}

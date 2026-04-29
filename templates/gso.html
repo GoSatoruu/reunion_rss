@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GSO Data Intelligence — Vietnam General Statistics Office Macroeconomic Data Crawler">
+    <title>GVBC Reunion — GSO Data Intelligence</title>
+    <link rel="icon" type="image/png" href="/static/img/logo.png">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════
+           GSO DATA INTELLIGENCE — Macroeconomic Crawler Dashboard
+           ═══════════════════════════════════════════════════════ */
+
+        .gso-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            grid-template-rows: auto 1fr;
+            gap: 16px;
+            height: calc(100vh - 120px);
+            padding: 16px;
+        }
+
+        /* ── Top Hero Banner ─────────────────────────────── */
+        .gso-hero {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #0f141a 0%, #131820 50%, #1a1030 100%);
+            border: 1px solid var(--border);
+            padding: 20px 28px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+        .gso-hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #22d3ee, transparent);
+        }
+        .gso-hero::after {
+            content: '';
+            position: absolute;
+            top: -80px;
+            right: -80px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .hero-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .hero-title-icon {
+            font-size: 24px;
+        }
+        .hero-subtitle {
+            font-size: 11px;
+            color: var(--text-3);
+            letter-spacing: 1.5px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 24px;
+        }
+        .hero-stat {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 8px 16px;
+            background: rgba(139, 92, 246, 0.08);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+        }
+        .hero-stat-val {
+            font-size: 22px;
+            font-weight: 700;
+            color: #8b5cf6;
+            letter-spacing: 1px;
+        }
+        .hero-stat-label {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .hero-actions .p-btn {
+            padding: 8px 18px;
+            font-size: 11px;
+        }
+        .btn-gso-primary {
+            border-color: #8b5cf6 !important;
+            color: #a78bfa !important;
+            background: rgba(139, 92, 246, 0.15) !important;
+        }
+        .btn-gso-primary:hover {
+            background: rgba(139, 92, 246, 0.3) !important;
+            border-color: #a78bfa !important;
+        }
+
+        /* ── Left Column: Catalog + Controls ─────────────── */
+        .gso-left {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+        }
+
+        .catalog-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+        }
+        .catalog-item:hover {
+            background: var(--bg-row-hover);
+        }
+        .catalog-item:last-child { border-bottom: none; }
+        .catalog-item.selected {
+            background: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid #8b5cf6;
+        }
+        .catalog-item.fetched::after {
+            content: '✓';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--green);
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .catalog-item.error-item::after {
+            content: '✗';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--red);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .cat-icon {
+            font-size: 20px;
+            flex-shrink: 0;
+            width: 32px;
+            text-align: center;
+        }
+        .cat-info {
+            flex: 1;
+            min-width: 0;
+        }
+        .cat-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-0);
+            letter-spacing: 0.5px;
+        }
+        .cat-desc {
+            font-size: 9px;
+            color: var(--text-3);
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .cat-badge {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            background: rgba(139, 92, 246, 0.12);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #a78bfa;
+            white-space: nowrap;
+        }
+
+        /* ── Right Column: Data Display ──────────────────── */
+        .gso-right {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow: hidden;
+        }
+
+        /* Data Table */
+        .data-table-wrap {
+            flex: 1;
+            overflow: auto;
+            background: var(--bg-0);
+            border: 1px solid var(--border);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .data-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .data-table th {
+            background: var(--bg-2);
+            border-bottom: 2px solid var(--border-bright);
+            padding: 8px 12px;
+            text-align: left;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            color: var(--text-3);
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+        .data-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.4);
+            color: var(--text-1);
+            font-variant-numeric: tabular-nums;
+        }
+        .data-table tbody tr {
+            transition: var(--transition);
+        }
+        .data-table tbody tr:hover {
+            background: var(--bg-row-hover);
+        }
+        .data-table td:last-child {
+            color: #8b5cf6;
+            font-weight: 600;
+        }
+
+        /* ── Crawl Progress ──────────────────────────────── */
+        .crawl-progress {
+            display: none;
+            padding: 16px;
+        }
+        .crawl-progress.active {
+            display: block;
+        }
+        .progress-bar-wrap {
+            height: 6px;
+            background: var(--bg-3);
+            overflow: hidden;
+            margin: 8px 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #8b5cf6, #22d3ee);
+            transition: width 0.5s ease;
+            box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+        }
+        .progress-label {
+            font-size: 10px;
+            color: var(--text-3);
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .progress-item-name {
+            color: #a78bfa;
+            font-weight: 600;
+        }
+
+        /* ── Crawl Results Table ─────────────────────────── */
+        .result-row {
+            display: grid;
+            grid-template-columns: 28px 1fr 90px 60px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+            font-size: 11px;
+            transition: var(--transition);
+        }
+        .result-row:hover { background: var(--bg-row-hover); }
+        .result-row:last-child { border-bottom: none; }
+        .result-icon { font-size: 16px; text-align: center; }
+        .result-name { font-weight: 600; color: var(--text-0); letter-spacing: 0.5px; }
+        .result-records { text-align: right; font-size: 10px; color: var(--cyan); font-weight: 600; }
+        .result-status { text-align: center; }
+        .status-success { color: var(--green); font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; background: var(--green-dim); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .status-error { color: var(--red); font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 6px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* ── Saved Datasets ──────────────────────────────── */
+        .saved-item {
+            display: grid;
+            grid-template-columns: 1fr 80px 80px 100px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.5);
+            font-size: 11px;
+            transition: var(--transition);
+        }
+        .saved-item:hover { background: var(--bg-row-hover); }
+        .saved-item:last-child { border-bottom: none; }
+        .saved-name { font-weight: 600; color: var(--text-0); }
+        .saved-records { text-align: right; color: var(--cyan); font-weight: 600; }
+        .saved-size { text-align: right; color: var(--text-3); font-size: 10px; }
+        .saved-actions {
+            display: flex;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .saved-actions .p-btn {
+            padding: 2px 8px;
+            font-size: 9px;
+        }
+
+        /* ── Browse Tree ─────────────────────────────────── */
+        .browse-node {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-bottom: 1px solid rgba(30, 42, 56, 0.3);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 11px;
+        }
+        .browse-node:hover { background: var(--bg-row-hover); }
+        .browse-node:last-child { border-bottom: none; }
+        .browse-icon {
+            font-size: 14px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .browse-label {
+            flex: 1;
+            color: var(--text-0);
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .browse-type {
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 2px 6px;
+            color: var(--text-3);
+            border: 1px solid var(--border);
+        }
+        .browse-breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-2);
+            font-size: 10px;
+            flex-wrap: wrap;
+        }
+        .breadcrumb-segment {
+            color: var(--text-3);
+            cursor: pointer;
+            transition: var(--transition);
+            letter-spacing: 0.5px;
+        }
+        .breadcrumb-segment:hover { color: #a78bfa; }
+        .breadcrumb-sep { color: var(--text-3); margin: 0 2px; }
+
+        /* ── Empty States ────────────────────────────────── */
+        .gso-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 40px;
+            color: var(--text-3);
+        }
+        .gso-empty-icon {
+            font-size: 36px;
+            opacity: 0.6;
+        }
+        .gso-empty-text {
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-align: center;
+        }
+
+        /* ── Tab Bar ─────────────────────────────────────── */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-2);
+        }
+        .tab-item {
+            padding: 8px 20px;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: var(--text-3);
+            cursor: pointer;
+            transition: var(--transition);
+            border-bottom: 2px solid transparent;
+            font-family: var(--font-mono);
+        }
+        .tab-item:hover {
+            color: var(--text-1);
+            background: var(--bg-3);
+        }
+        .tab-item.active {
+            color: #a78bfa;
+            border-bottom-color: #8b5cf6;
+        }
+
+        /* ── Tab Content ─────────────────────────────────── */
+        .tab-content { display: none; flex: 1; overflow: hidden; }
+        .tab-content.active { display: flex; flex-direction: column; }
+
+        /* ── Responsive ──────────────────────────────────── */
+        @media (max-width: 1200px) {
+            .gso-layout {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            .gso-hero { flex-direction: column; align-items: flex-start; }
+            .hero-stats { flex-wrap: wrap; }
+        }
+
+        /* ── Animation ───────────────────────────────────── */
+        @keyframes pulse-purple {
+            0%, 100% { box-shadow: 0 0 8px rgba(139, 92, 246, 0.3); }
+            50% { box-shadow: 0 0 16px rgba(139, 92, 246, 0.6); }
+        }
+        .gso-running .hero-stat {
+            animation: pulse-purple 2s ease-in-out infinite;
+        }
+
+        /* Loading Spinner Override */
+        .gso-spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(139, 92, 246, 0.3);
+            border-top-color: #8b5cf6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <nav id="main-nav">
+        <div class="nav-brand">
+            <img src="/static/img/logo_dark.png" alt="GVBC Logo" class="nav-logo">
+            <span class="nav-title">GVBC REUNION</span>
+            <span class="nav-status-dot"></span>
+            <span class="nav-status-text">SYSTEM ONLINE</span>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link" id="nav-home">DASHBOARD</a>
+            <a href="/finance" class="nav-link" id="nav-finance">FINANCE INTEL</a>
+            <a href="/airline" class="nav-link" id="nav-airline">AIRLINE INTEL</a>
+            <a href="/logistics" class="nav-link" id="nav-logistics">LOGISTICS INTEL</a>
+            <a href="/space" class="nav-link" id="nav-space">SPACE INTEL</a>
+            <a href="/social" class="nav-link" id="nav-social">SOCIAL LISTENING</a>
+            <a href="/gso" class="nav-link active" id="nav-gso">GSO DATA</a>
+            <a href="/settings" class="nav-link" id="nav-settings">SETTINGS</a>
+            <button id="theme-toggle" class="p-btn p-btn-sm" title="Toggle Theme">◐</button>
+        </div>
+    </nav>
+
+    <main class="gso-layout" id="gso-main">
+        <!-- ═══ HERO BANNER ═══ -->
+        <div class="gso-hero" id="gso-hero">
+            <div class="hero-info">
+                <div class="hero-title">
+                    <span class="hero-title-icon">🇻🇳</span>
+                    GSO DATA INTELLIGENCE
+                </div>
+                <div class="hero-subtitle">GENERAL STATISTICS OFFICE OF VIETNAM · MACROECONOMIC DATA CRAWLER · PXWEB API</div>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <span class="hero-stat-val" id="stat-catalog">10</span>
+                    <span class="hero-stat-label">CATALOG ITEMS</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-val" id="stat-saved">0</span>
+                    <span class="hero-stat-label">DATASETS SAVED</span>
+                </div>
+                <div class="hero-stat">
+                    <span class="hero-stat-val" id="stat-records">0</span>
+                    <span class="hero-stat-label">TOTAL RECORDS</span>
+                </div>
+            </div>
+            <div class="hero-actions">
+                <button class="p-btn btn-gso-primary" id="btn-crawl-all" title="Crawl all catalog items from GSO">
+                    ⚡ CRAWL ALL
+                </button>
+                <button class="p-btn" id="btn-clear-cache" title="Clear cached data">
+                    🗑️ CLEAR CACHE
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══ LEFT: Catalog + Browse ═══ -->
+        <div class="gso-left">
+            <!-- Catalog Panel -->
+            <section class="panel" style="flex: 1; min-height: 300px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator" style="background: #8b5cf6; box-shadow: 0 0 6px #8b5cf6;"></span>
+                        DATA CATALOG
+                    </div>
+                    <span class="panel-badge" id="catalog-count">10 ITEMS</span>
+                </div>
+                <div class="panel-body" style="padding: 0;" id="catalog-list">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
+
+            <!-- Browse Database Panel -->
+            <section class="panel" style="flex: 1; min-height: 200px;">
+                <div class="panel-header">
+                    <div class="panel-label">
+                        <span class="panel-indicator"></span>
+                        BROWSE DATABASE
+                    </div>
+                    <button class="p-btn p-btn-sm" id="btn-browse-root" title="Go to database root">⟳ ROOT</button>
+                </div>
+                <div class="browse-breadcrumb" id="browse-breadcrumb">
+                    <span class="breadcrumb-segment" data-path="">ROOT</span>
+                </div>
+                <div class="panel-body" style="padding: 0;" id="browse-tree">
+                    <div class="gso-empty">
+                        <div class="gso-empty-icon">📂</div>
+                        <div class="gso-empty-text">Click a folder to browse<br>the GSO database hierarchy</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ═══ RIGHT: Data Display + Results ═══ -->
+        <div class="gso-right">
+            <!-- Tab Bar -->
+            <div class="tab-bar" id="gso-tabs">
+                <div class="tab-item active" data-tab="data-viewer" id="tab-data">📊 DATA VIEWER</div>
+                <div class="tab-item" data-tab="crawl-results" id="tab-results">⚡ CRAWL RESULTS</div>
+                <div class="tab-item" data-tab="saved-data" id="tab-saved">💾 SAVED DATA</div>
+            </div>
+
+            <!-- Tab: Data Viewer -->
+            <div class="tab-content active" id="tab-content-data-viewer">
+                <section class="panel" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="panel-header">
+                        <div class="panel-label">
+                            <span class="panel-indicator" style="background: #8b5cf6; box-shadow: 0 0 6px #8b5cf6;"></span>
+                            <span id="viewer-title">SELECT A DATASET</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="p-btn p-btn-sm" id="btn-fetch-selected" style="display: none;">⟳ FETCH</button>
+                            <button class="p-btn p-btn-sm btn-gso-primary" id="btn-save-current" style="display: none;">💾 SAVE</button>
+                            <button class="p-btn p-btn-sm" id="btn-export-csv" style="display: none;">📥 CSV</button>
+                        </div>
+                    </div>
+                    <!-- Crawl Progress -->
+                    <div class="crawl-progress" id="crawl-progress">
+                        <div class="progress-label">
+                            <span>CRAWLING GSO DATABASE...</span>
+                            <span id="progress-pct">0%</span>
+                        </div>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                        </div>
+                        <div class="progress-label">
+                            <span class="progress-item-name" id="progress-item">Initializing...</span>
+                            <span id="progress-count">0 / 0</span>
+                        </div>
+                    </div>
+                    <!-- Data Table -->
+                    <div class="data-table-wrap" id="data-table-wrap">
+                        <div class="gso-empty" id="data-empty">
+                            <div class="gso-empty-icon">📈</div>
+                            <div class="gso-empty-text">Select a catalog item or browse<br>the database to view data</div>
+                        </div>
+                        <table class="data-table" id="data-table" style="display: none;">
+                            <thead id="data-thead"></thead>
+                            <tbody id="data-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="panel-footer-bar" id="data-footer">
+                        DATA SOURCE: pxweb.gso.gov.vn · GENERAL STATISTICS OFFICE OF VIETNAM
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab: Crawl Results -->
+            <div class="tab-content" id="tab-content-crawl-results">
+                <section class="panel" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="panel-header">
+                        <div class="panel-label">
+                            <span class="panel-indicator"></span>
+                            CRAWL RESULTS
+                        </div>
+                        <span class="panel-badge" id="result-badge">NO CRAWL</span>
+                    </div>
+                    <div class="panel-body" style="padding: 0; flex: 1; overflow-y: auto;" id="results-list">
+                        <div class="gso-empty">
+                            <div class="gso-empty-icon">⚡</div>
+                            <div class="gso-empty-text">Click "CRAWL ALL" to fetch<br>all catalog datasets from GSO</div>
+                        </div>
+                    </div>
+                    <div class="panel-footer-bar">
+                        Crawl results are saved to data/gso/saved/
+                    </div>
+                </section>
+            </div>
+
+            <!-- Tab: Saved Data -->
+            <div class="tab-content" id="tab-content-saved-data">
+                <section class="panel" style="flex: 1; display: flex; flex-direction: column;">
+                    <div class="panel-header">
+                        <div class="panel-label">
+                            <span class="panel-indicator" style="background: var(--green); box-shadow: 0 0 6px var(--green);"></span>
+                            SAVED DATASETS
+                        </div>
+                        <span class="panel-badge" id="saved-badge">0</span>
+                    </div>
+                    <div class="panel-body" style="padding: 0; flex: 1; overflow-y: auto;" id="saved-list">
+                        <div class="gso-empty">
+                            <div class="gso-empty-icon">💾</div>
+                            <div class="gso-empty-text">No saved datasets yet.<br>Crawl data and save it for offline access.</div>
+                        </div>
+                    </div>
+                    <div class="panel-footer-bar">
+                        Saved datasets persist in data/gso/saved/
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="/static/js/intel.js"></script>
+    <script src="/static/js/gso.js"></script>
+</body>
+</html>

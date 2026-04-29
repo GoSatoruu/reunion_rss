@@ -55,37 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // ── Mock Data Button ──────────────────────────────
-    document.getElementById("btn-generate-mock")?.addEventListener("click", async () => {
-        const status = document.getElementById("scan-status");
-        status.textContent = "🎲 Generating mock financial signals...";
-        appendMessage("user", "Generating mock social listening data for demonstration...");
-
-        try {
-            const res = await fetch("/api/social/mock", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ count: 80 })
-            });
-            const data = await res.json();
-
-            if (data.status === "success") {
-                status.textContent = `✅ Generated ${data.records_generated} mock records`;
-                appendMessage("ai",
-                    `**Mock Data Generated**\n\n` +
-                    `- Records created: **${data.records_generated}**\n` +
-                    `- Sources: X, Telegram, Reddit, CafeF, Bloomberg RSS, F319, FireAnt, Discord\n` +
-                    `- Assets: BTC, ETH, NVDA, TSLA, VHM, FPT, HPG, SOL, AAPL, GOLD, VNINDEX, SSI\n\n` +
-                    `Dashboard refreshing...`
-                );
-                await loadDashboard();
-            } else {
-                status.textContent = `❌ Error: ${data.error || "Unknown"}`;
-            }
-        } catch (e) {
-            status.textContent = `❌ Connection error: ${e.message}`;
-        }
-    });
+    // Mock Data button removed.
 
     // ── Theme Toggle ──────────────────────────────────
     document.getElementById("theme-toggle")?.addEventListener("click", toggleTheme);

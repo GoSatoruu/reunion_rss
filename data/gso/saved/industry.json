@@ -1,0 +1,117 @@
+{
+  "id": "industry",
+  "fetched_at": "2026-04-28T18:53:03.869984",
+  "metadata": {
+    "name": "Industrial Production Index",
+    "category": "Industry",
+    "path": "Giao dien moi - EN/Industry/Index of Industrial Production/V04.01"
+  },
+  "data": {
+    "columns": [
+      {
+        "code": "Year",
+        "text": "Year"
+      },
+      {
+        "code": "Indicator",
+        "text": "Indicator"
+      },
+      {
+        "code": "Value",
+        "text": "Value"
+      }
+    ],
+    "data": [
+      {
+        "key": [
+          "2020",
+          "Total"
+        ],
+        "values": [
+          "141"
+        ]
+      },
+      {
+        "key": [
+          "2020",
+          "Index"
+        ],
+        "values": [
+          "176"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Total"
+        ],
+        "values": [
+          "137"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Index"
+        ],
+        "values": [
+          "121"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Total"
+        ],
+        "values": [
+          "107"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Index"
+        ],
+        "values": [
+          "153"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Total"
+        ],
+        "values": [
+          "133"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Index"
+        ],
+        "values": [
+          "180"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Total"
+        ],
+        "values": [
+          "112"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Index"
+        ],
+        "values": [
+          "165"
+        ]
+      }
+    ]
+  }
+}

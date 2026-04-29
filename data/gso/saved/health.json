@@ -1,0 +1,117 @@
+{
+  "id": "health",
+  "fetched_at": "2026-04-28T18:55:08.725097",
+  "metadata": {
+    "name": "Health",
+    "category": "Social",
+    "path": "Giao dien moi - EN/Social indicators/Health/V09.02"
+  },
+  "data": {
+    "columns": [
+      {
+        "code": "Year",
+        "text": "Year"
+      },
+      {
+        "code": "Indicator",
+        "text": "Indicator"
+      },
+      {
+        "code": "Value",
+        "text": "Value"
+      }
+    ],
+    "data": [
+      {
+        "key": [
+          "2020",
+          "Total"
+        ],
+        "values": [
+          "162"
+        ]
+      },
+      {
+        "key": [
+          "2020",
+          "Index"
+        ],
+        "values": [
+          "155"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Total"
+        ],
+        "values": [
+          "132"
+        ]
+      },
+      {
+        "key": [
+          "2021",
+          "Index"
+        ],
+        "values": [
+          "158"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Total"
+        ],
+        "values": [
+          "175"
+        ]
+      },
+      {
+        "key": [
+          "2022",
+          "Index"
+        ],
+        "values": [
+          "191"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Total"
+        ],
+        "values": [
+          "194"
+        ]
+      },
+      {
+        "key": [
+          "2023",
+          "Index"
+        ],
+        "values": [
+          "142"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Total"
+        ],
+        "values": [
+          "150"
+        ]
+      },
+      {
+        "key": [
+          "2024",
+          "Index"
+        ],
+        "values": [
+          "186"
+        ]
+      }
+    ]
+  }
+}

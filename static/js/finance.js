@@ -128,10 +128,31 @@ window.toggleSize = function(cardId) {
 // ─── Intelligence & Movers ───────────────────────────
 async function loadIntelligence() {
     try {
-        // 1. Get News Sentiment
-        const resFeed = await fetch("/api/feed");
-        const articles = await resFeed.json();
-        const newsSentiment = Intel.getNewsSentiment(articles);
+        // 1. Get News Sentiment (from Social Dashboard or fallback to RSS)
+        let newsSentiment = 50;
+        let socialData = null;
+        let articles = [];
+        
+        try {
+            const resSocial = await fetch("/api/social/dashboard");
+            socialData = await resSocial.json();
+            if (socialData && socialData.overall_asi !== undefined) {
+                // Convert ASI [-1.0, 1.0] to [0, 100]
+                newsSentiment = Math.round((socialData.overall_asi + 1) * 50);
+            }
+        } catch(err) {
+            console.warn("Could not load social dashboard data", err);
+        }
+
+        if (newsSentiment === 50 || !socialData || !socialData.hot_assets) {
+            try {
+                const resFeed = await fetch("/api/feed");
+                articles = await resFeed.json();
+                if (newsSentiment === 50) {
+                    newsSentiment = Intel.getNewsSentiment(articles);
+                }
+            } catch(err) {}
+        }
 
         // 2. Get Asset Histories
         const symbols = ["^VNINDEX", "^GSPC", "BTC-USD", "GC=F", "CL=F"];
@@ -144,15 +165,16 @@ async function loadIntelligence() {
         let sentimentEl = document.getElementById("kpi-sentiment");
         let stanceEl = document.getElementById("kpi-stance");
         
-        sentimentEl.textContent = data.sentiment_score + "/100";
-        stanceEl.textContent = data.stance;
-        
-        if (data.stance.includes("BULLISH")) {
-            stanceEl.style.color = "#10b981";
-        } else if (data.stance.includes("BEARISH")) {
-            stanceEl.style.color = "#ef4444";
-        } else {
-            stanceEl.style.color = "#f59e0b";
+        if (sentimentEl) sentimentEl.textContent = data.sentiment_score + "/100";
+        if (stanceEl) {
+            stanceEl.textContent = data.stance;
+            if (data.stance.includes("BULLISH")) {
+                stanceEl.style.color = "#10b981";
+            } else if (data.stance.includes("BEARISH")) {
+                stanceEl.style.color = "#ef4444";
+            } else {
+                stanceEl.style.color = "#f59e0b";
+            }
         }
 
         // --- Detail Sentiment Panel ---
@@ -177,49 +199,70 @@ async function loadIntelligence() {
 
         // Top Movers
         const moversBody = document.getElementById("finance-movers-body");
-        if (data.top_movers && data.top_movers.length > 0) {
-            let html = "";
-            data.top_movers.forEach((m, i) => {
-                const isUp = m.change >= 0;
-                const color = isUp ? "#10b981" : "#ef4444";
-                const sign = isUp ? "+" : "";
-                html += `
-                    <div class="finance-stat-row">
-                        <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="stat-name">${m.symbol}</span>
-                            <span style="font-size:9px; color:var(--text-3);">MARKET DRIVER</span>
+        if (moversBody) {
+            if (data.top_movers && data.top_movers.length > 0) {
+                let html = "";
+                data.top_movers.forEach((m, i) => {
+                    const isUp = m.change >= 0;
+                    const color = isUp ? "#10b981" : "#ef4444";
+                    const sign = isUp ? "+" : "";
+                    html += `
+                        <div class="finance-stat-row">
+                            <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
+                            <div style="display:flex; flex-direction:column;">
+                                <span class="stat-name">${m.symbol}</span>
+                                <span style="font-size:9px; color:var(--text-3);">MARKET DRIVER</span>
+                            </div>
+                            <span class="stat-val" style="color:${color};">${sign}${m.percent_change.toFixed(2)}%</span>
                         </div>
-                        <span class="stat-val" style="color:${color};">${sign}${m.percent_change.toFixed(2)}%</span>
-                    </div>
-                `;
-            });
-            moversBody.innerHTML = html;
-        } else {
-            moversBody.innerHTML = '<div class="empty-state"><span>INSUFFICIENT DATA</span></div>';
+                    `;
+                });
+                moversBody.innerHTML = html;
+            } else {
+                moversBody.innerHTML = '<div class="empty-state"><span>INSUFFICIENT DATA</span></div>';
+            }
         }
 
-        // Media Quotes (Ticker Mentions)
+        // Media Quotes (Ticker Mentions) connected to Social Listen Hot Assets
         const quotesBody = document.getElementById("finance-quotes-body");
-        const quotesData = Intel.getTrending(articles).keywords.slice(0, 5);
-        
-        if (quotesData && quotesData.length > 0) {
-            let html = "";
-            quotesData.forEach((q, i) => {
-                html += `
-                    <div class="finance-stat-row">
-                        <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="stat-name">${q.word.toUpperCase()}</span>
-                            <span style="font-size:9px; color:var(--text-3);">TICKER MENTION</span>
+        if (quotesBody) {
+            if (socialData && socialData.hot_assets && socialData.hot_assets.length > 0) {
+                let html = "";
+                socialData.hot_assets.slice(0, 5).forEach((q, i) => {
+                    html += `
+                        <div class="finance-stat-row">
+                            <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
+                            <div style="display:flex; flex-direction:column;">
+                                <span class="stat-name">${q.asset.toUpperCase()}</span>
+                                <span style="font-size:9px; color:var(--text-3);">SOCIAL TRENDING</span>
+                            </div>
+                            <span class="stat-val" style="color:var(--text-1);">${q.volume} MSG</span>
                         </div>
-                        <span class="stat-val" style="color:var(--text-1);">${q.count} MSG</span>
-                    </div>
-                `;
-            });
-            if (quotesBody) quotesBody.innerHTML = html;
-        } else {
-            if (quotesBody) quotesBody.innerHTML = '<div class="empty-state"><span>NO QUOTES FOUND</span></div>';
+                    `;
+                });
+                quotesBody.innerHTML = html;
+            } else {
+                // Fallback to RSS trending keywords
+                const quotesData = articles.length ? Intel.getTrending(articles).keywords.slice(0, 5) : [];
+                if (quotesData && quotesData.length > 0) {
+                    let html = "";
+                    quotesData.forEach((q, i) => {
+                        html += `
+                            <div class="finance-stat-row">
+                                <span class="stat-rank">${String(i+1).padStart(2,'0')}</span>
+                                <div style="display:flex; flex-direction:column;">
+                                    <span class="stat-name">${q.word.toUpperCase()}</span>
+                                    <span style="font-size:9px; color:var(--text-3);">TICKER MENTION</span>
+                                </div>
+                                <span class="stat-val" style="color:var(--text-1);">${q.count} MSG</span>
+                            </div>
+                        `;
+                    });
+                    quotesBody.innerHTML = html;
+                } else {
+                    quotesBody.innerHTML = '<div class="empty-state"><span>NO QUOTES FOUND</span></div>';
+                }
+            }
         }
     } catch(e) {
         console.error("Intel Error", e);

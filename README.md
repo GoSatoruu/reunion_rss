@@ -2,7 +2,7 @@
   <img src="branding/full_logo.png" alt="The Great Vietnam Banking Corporation" width="480">
 </p>
 
-<h1 align="center">GVBC Reunion</h1>
+<h1 align="center">ITDR</h1>
 
 <p align="center">
   <strong>Live News Feed · Flight Tracking · Ship Tracking</strong><br>
@@ -41,7 +41,7 @@ Browser (Intel.js Analysis) ─→ Flask (app.py Proxy)
 
 ### Running with Docker (Recommended)
 
-The easiest way to run GVBC Reunion is using Docker.
+The easiest way to run ITDR is using Docker.
 
 ```bash
 # Clone the repository
